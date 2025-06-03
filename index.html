@@ -2,74 +2,17 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Gráfico MQTT en Tiempo Real</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <title>Dashboard MQTT en vivo</title>
+  <style>
+    iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+  </style>
 </head>
 <body>
-  <h1>Gráfico MQTT en Tiempo Real</h1>
-  <canvas id="myChart" width="600" height="300"></canvas>
-
-  <script>
-    // Conectarse al broker MQTT público de HiveMQ
-    const client = mqtt.connect('wss://broker.hivemq.com:1883/mqtt');
-
-    const ctx = document.getElementById('myChart').getContext('2d');
-
-    const data = {
-      labels: [], // etiquetas de tiempo
-      datasets: [{
-        label: 'Valor MQTT',
-        data: [],
-        borderColor: 'rgb(75, 192, 192)',
-        fill: false,
-        tension: 0.1
-      }]
-    };
-
-    const config = {
-      type: 'line',
-      data: data,
-      options: {
-        animation: false,
-        scales: {
-          x: {
-            title: { display: true, text: 'Hora' }
-          },
-          y: {
-            title: { display: true, text: 'Valor' }
-          }
-        }
-      }
-    };
-
-    const myChart = new Chart(ctx, config);
-
-    client.on('connect', () => {
-      console.log('Conectado al broker MQTT');
-      client.subscribe('test/hivemq'); // suscribirse al tópico
-    });
-
-    client.on('message', (topic, message) => {
-      if (topic === 'test/hivemq') {
-        const value = parseFloat(message.toString());
-        if (!isNaN(value)) {
-          const now = new Date().toLocaleTimeString();
-
-          // Añadir datos al gráfico
-          data.labels.push(now);
-          data.datasets[0].data.push(value);
-
-          // Limitar a los últimos 20 datos
-          if (data.labels.length > 20) {
-            data.labels.shift();
-            data.datasets[0].data.shift();
-          }
-
-          myChart.update();
-        }
-      }
-    });
-  </script>
+  <h1>Dashboard MQTT en vivo</h1>
+  <iframe src="https://mqtt-dashboard.com/d/tu_dashboard_id?orgId=1&refresh=5s"></iframe>
 </body>
 </html>
