@@ -1,104 +1,321 @@
-// Suscribirse a todos los tópicos
-client.on('connect', () => {
-  console.log('Conectado al broker MQTT');
-  client.subscribe(['vientosts1', 'vientosts2', 'vientosts3', 'vientosts4', 'vientosts5']);
-});
-
-const data = {
-  labels: [], 
-  datasets: [
-    {
-      label: 'vientosts1',
-      data: [],
-      borderColor: 'rgb(255, 99, 132)', // rojo
-      fill: false,
-      tension: 0.1,
-      pointRadius: 4,
-      pointHoverRadius: 6
-    },
-    {
-      label: 'vientosts2',
-      data: [],
-      borderColor: 'rgb(54, 162, 235)', // azul
-      fill: false,
-      tension: 0.1,
-      pointRadius: 4,
-      pointHoverRadius: 6
-    },
-    {
-      label: 'vientosts3',
-      data: [],
-      borderColor: 'rgb(255, 206, 86)', // amarillo
-      fill: false,
-      tension: 0.1,
-      pointRadius: 4,
-      pointHoverRadius: 6
-    },
-    {
-      label: 'vientosts4',
-      data: [],
-      borderColor: 'rgb(75, 192, 192)', // verde agua
-      fill: false,
-      tension: 0.1,
-      pointRadius: 4,
-      pointHoverRadius: 6
-    },
-    {
-      label: 'vientosts5',
-      data: [],
-      borderColor: 'rgb(153, 102, 255)', // morado
-      fill: false,
-      tension: 0.1,
-      pointRadius: 4,
-      pointHoverRadius: 6
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Velocidad del viento</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
     }
-  ]
-};
-
-client.on('message', (topic, message) => {
-  const value = parseFloat(message.toString());
-  if (!isNaN(value)) {
-    const now = new Date();
-    const timeLabel = now.toLocaleTimeString();
-    const fullDate = now.toLocaleString();
-
-    // Guardar datos para tabla SIEMPRE - aquí, por simplicidad,
-    // guardamos solo datos del tópico 'vientosts1' en tabla (o puedes adaptar)
-    if (topic === 'vientosts1') {
-      allData.push({datetime: fullDate, value: value});
-      if(allData.length > 1000) allData.shift();
+    #logo-fijo {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 80px;
+      height: auto;
+      z-index: 1000;
     }
+    h1 {
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: white;
+    }
+    canvas {
+      background-color: black;
+      border-radius: 10px;
+      display: block;
+      margin: 0 auto;
+      width: 900px !important;
+      height: 450px !important;
+    }
+    #controls {
+      text-align: center;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+    button {
+      background-color: #4bc0c0;
+      border: none;
+      color: black;
+      font-weight: bold;
+      padding: 10px 20px;
+      margin: 0 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #36a3a3;
+    }
+    table {
+      width: 900px;
+      margin: 0 auto;
+      border-collapse: collapse;
+      color: white;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #555;
+      padding: 8px 12px;
+      text-align: center;
+    }
+    th {
+      background-color: #222;
+    }
+    #pagination {
+      text-align: center;
+      margin-top: 10px;
+      color: white;
+    }
+    #pagination button {
+      background-color: #4bc0c0;
+      border: none;
+      color: black;
+      font-weight: bold;
+      padding: 6px 12px;
+      margin: 0 5px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #pagination button:disabled {
+      background-color: #777;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <img id="logo-fijo" src="logo puerto.png" alt="Logo Puerto" />
+  <h1>Velocidad del viento</h1>
 
-    updatePaginationButtons();
-    renderTablePage(currentPage);
+  <canvas id="myChart" width="900" height="450"></canvas>
 
-    if (!paused) {
-      // Solo agregar la nueva hora una vez (para sincronizar los datasets)
-      if (!data.labels.includes(timeLabel)) {
-        data.labels.push(timeLabel);
-        if (data.labels.length > 20) {
-          data.labels.shift();
+  <div id="controls">
+    <button id="pauseBtn">Pausar</button>
+    <button id="playBtn" disabled>Reanudar</button>
+  </div>
+
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>Fecha y Hora</th>
+        <th>Velocidad del viento (m/s)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="pagination">
+    <button id="prevPage" disabled>Anterior</button>
+    <span id="pageInfo">Página 1 / 1</span>
+    <button id="nextPage" disabled>Siguiente</button>
+  </div>
+
+  <script>
+    const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
+    const ctx = document.getElementById('myChart').getContext('2d');
+
+    // 5 datasets para los 5 tópicos
+    const data = {
+      labels: [], 
+      datasets: [
+        {
+          label: 'vientosts1',
+          data: [],
+          borderColor: 'rgb(255, 99, 132)', // rojo
+          fill: false,
+          tension: 0.1,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: 'vientosts2',
+          data: [],
+          borderColor: 'rgb(54, 162, 235)', // azul
+          fill: false,
+          tension: 0.1,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: 'vientosts3',
+          data: [],
+          borderColor: 'rgb(255, 206, 86)', // amarillo
+          fill: false,
+          tension: 0.1,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: 'vientosts4',
+          data: [],
+          borderColor: 'rgb(75, 192, 192)', // verde aqua
+          fill: false,
+          tension: 0.1,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: 'vientosts5',
+          data: [],
+          borderColor: 'rgb(153, 102, 255)', // morado
+          fill: false,
+          tension: 0.1,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]
+    };
+
+    const config = {
+      type: 'line',
+      data: data,
+      options: {
+        animation: false,
+        plugins: {
+          legend: {
+            labels: { color: 'white', font: { size: 14 } }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Hora', color: 'white', font: { size: 16 } },
+            ticks: { color: 'white' },
+            grid: { color: 'rgba(255,255,255,0.2)' }
+          },
+          y: {
+            title: { display: true, text: 'Valor', color: 'white', font: { size: 16 } },
+            ticks: { color: 'white' },
+            grid: { color: 'rgba(255,255,255,0.2)' }
+          }
         }
       }
+    };
 
-      // Encuentra índice del dataset según topic
-      const datasetIndex = {
-        'vientosts1': 0,
-        'vientosts2': 1,
-        'vientosts3': 2,
-        'vientosts4': 3,
-        'vientosts5': 4
-      }[topic];
+    const myChart = new Chart(ctx, config);
 
-      if (datasetIndex !== undefined) {
-        data.datasets[datasetIndex].data.push(value);
-        if (data.datasets[datasetIndex].data.length > 20) {
-          data.datasets[datasetIndex].data.shift();
+    let paused = false;
+    let allData = []; // Solo guardamos datos de vientosts1 para tabla
+
+    const pauseBtn = document.getElementById('pauseBtn');
+    const playBtn = document.getElementById('playBtn');
+
+    pauseBtn.addEventListener('click', () => {
+      paused = true;
+      pauseBtn.disabled = true;
+      playBtn.disabled = false;
+    });
+
+    playBtn.addEventListener('click', () => {
+      paused = false;
+      pauseBtn.disabled = false;
+      playBtn.disabled = true;
+    });
+
+    // Suscribir a los 5 tópicos
+    client.on('connect', () => {
+      console.log('Conectado al broker MQTT');
+      client.subscribe(['vientosts1', 'vientosts2', 'vientosts3', 'vientosts4', 'vientosts5']);
+    });
+
+    client.on('message', (topic, message) => {
+      const value = parseFloat(message.toString());
+      if (!isNaN(value)) {
+        const now = new Date();
+        const timeLabel = now.toLocaleTimeString();
+        const fullDate = now.toLocaleString();
+
+        // Guardar solo los datos de vientosts1 en tabla
+        if (topic === 'vientosts1') {
+          allData.push({datetime: fullDate, value: value});
+          if(allData.length > 1000) allData.shift();
+        }
+
+        renderTablePage(currentPage);
+        updatePaginationButtons();
+
+        if (!paused) {
+          // Añadir label solo una vez por nueva hora (sin duplicados)
+          if (!data.labels.includes(timeLabel)) {
+            data.labels.push(timeLabel);
+            if (data.labels.length > 20) {
+              data.labels.shift();
+            }
+          }
+
+          const datasetIndex = {
+            'vientosts1': 0,
+            'vientosts2': 1,
+            'vientosts3': 2,
+            'vientosts4': 3,
+            'vientosts5': 4
+          }[topic];
+
+          if (datasetIndex !== undefined) {
+            data.datasets[datasetIndex].data.push(value);
+            if (data.datasets[datasetIndex].data.length > 20) {
+              data.datasets[datasetIndex].data.shift();
+            }
+          }
+
+          myChart.update();
         }
       }
+    });
 
-      myChart.update();
+    const tableBody = document.querySelector('#dataTable tbody');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const pageInfo = document.getElementById('pageInfo');
+    const rowsPerPage = 10;
+    let currentPage = 1;
+
+    function renderTablePage(page) {
+      tableBody.innerHTML = '';
+      const start = (page - 1) * rowsPerPage;
+      const end = start + rowsPerPage;
+      const pageData = allData.slice(start, end);
+      for (const row of pageData) {
+        const tr = document.createElement('tr');
+        const tdDate = document.createElement('td');
+        const tdValue = document.createElement('td');
+        tdDate.textContent = row.datetime;
+        tdValue.textContent = row.value.toFixed(2);
+        tr.appendChild(tdDate);
+        tr.appendChild(tdValue);
+        tableBody.appendChild(tr);
+      }
+      const totalPages = Math.max(1, Math.ceil(allData.length / rowsPerPage));
+      pageInfo.textContent = `Página ${currentPage} / ${totalPages}`;
     }
-  }
-});
+
+    function updatePaginationButtons() {
+      const totalPages = Math.max(1, Math.ceil(allData.length / rowsPerPage));
+      prevPageBtn.disabled = currentPage === 1;
+      nextPageBtn.disabled = currentPage === totalPages;
+    }
+
+    prevPageBtn.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTablePage(currentPage);
+        updatePaginationButtons();
+      }
+    });
+
+    nextPageBtn.addEventListener('click', () => {
+      if (currentPage * rowsPerPage < allData.length) {
+        currentPage++;
+        renderTablePage(currentPage);
+        updatePaginationButtons();
+      }
+    });
+  </script>
+</body>
+</html>
 
