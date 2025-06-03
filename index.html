@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Velocidad del viento</title>
+  <title>Gráfico MQTT en Tiempo Real</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
@@ -10,125 +10,70 @@
       background-color: black;
       color: white;
       font-family: Arial, sans-serif;
-      margin: 0;
+      text-align: center;
       padding: 20px;
     }
-    #logo-fijo {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      width: 80px;
-      height: auto;
-      z-index: 1000;
-    }
-    h1 {
-      text-align: center;
-      margin-top: 0;
-      margin-bottom: 20px;
-      color: white;
-    }
-    canvas {
-      background-color: black;
-      border-radius: 10px;
+    #myChart {
+      max-width: 90%;
+      margin: auto;
       display: block;
-      margin: 0 auto;
-      width: 900px !important;
-      height: 450px !important;
-    }
-    #controls {
-      text-align: center;
-      margin-bottom: 20px;
     }
     button {
-      background-color: #4bc0c0;
-      border: none;
-      color: black;
-      font-weight: bold;
+      margin: 10px 5px;
       padding: 10px 20px;
-      margin: 0 10px;
-      border-radius: 5px;
+      font-size: 16px;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #36a3a3;
-    }
     table {
-      width: 900px;
-      margin: 0 auto;
+      width: 90%;
+      margin: 20px auto;
       border-collapse: collapse;
+      background-color: #111;
       color: white;
-      font-size: 14px;
     }
     th, td {
-      border: 1px solid #555;
-      padding: 8px 12px;
+      border: 1px solid #444;
+      padding: 8px;
       text-align: center;
     }
     th {
       background-color: #222;
     }
-    #pagination {
-      text-align: center;
-      margin-top: 10px;
-      color: white;
-    }
-    #pagination button {
-      background-color: #4bc0c0;
-      border: none;
-      color: black;
-      font-weight: bold;
-      padding: 6px 12px;
-      margin: 0 5px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    #pagination button:disabled {
-      background-color: #777;
-      cursor: not-allowed;
-    }
   </style>
 </head>
 <body>
-  <img id="logo-fijo" src="logo puerto.png" alt="Logo Puerto" />
   <h1>Velocidad del viento</h1>
-
-  <div id="controls">
-    <button id="pauseBtn">Pausar</button>
-    <button id="playBtn" disabled>Reanudar</button>
+  <canvas id="myChart" width="800" height="400"></canvas>
+  <div>
+    <button id="btnPause">Pausar gráfico</button>
+    <button id="btnPlay" disabled>Reanudar gráfico</button>
   </div>
-
-  <canvas id="myChart" width="900" height="450"></canvas>
-
+  
   <table id="dataTable">
     <thead>
       <tr>
         <th>Fecha y Hora</th>
-        <th>Velocidad del viento (m/s)</th>
+        <th>Valor (m/s)</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <!-- Aquí van los datos -->
+    </tbody>
   </table>
-
-  <div id="pagination">
-    <button id="prevPage" disabled>Anterior</button>
-    <span id="pageInfo">Página 1</span>
-    <button id="nextPage" disabled>Siguiente</button>
-  </div>
 
   <script>
     const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
+
     const ctx = document.getElementById('myChart').getContext('2d');
 
     const data = {
-      labels: [], 
+      labels: [],
       datasets: [{
-        label: 'Velocidad del viento (m/s)',
+        label: 'Velocidad del viento',
         data: [],
         borderColor: 'rgb(75, 192, 192)',
         fill: false,
-        tension: 0.1,
-        pointRadius: 4,
-        pointHoverRadius: 6
+        tension: 0.1
       }]
     };
 
@@ -137,21 +82,25 @@
       data: data,
       options: {
         animation: false,
-        plugins: {
-          legend: {
-            labels: { color: 'white', font: { size: 14 } }
-          }
-        },
         scales: {
           x: {
-            title: { display: true, text: 'Hora', color: 'white', font: { size: 16 } },
-            ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.2)' }
+            title: { display: true, text: 'Hora' },
+            ticks: {
+              color: 'white'
+            }
           },
           y: {
-            title: { display: true, text: 'Valor', color: 'white', font: { size: 16 } },
-            ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.2)' }
+            title: { display: true, text: 'Velocidad del viento (m/s)' },
+            ticks: {
+              color: 'white'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: 'white'
+            }
           }
         }
       }
@@ -159,24 +108,13 @@
 
     const myChart = new Chart(ctx, config);
 
-    let paused = false;
-    let allData = []; // Guardar datos completos con timestamp
+    // Variables para controlar el estado del gráfico
+    let isPaused = false;
 
-    // Botones
-    const pauseBtn = document.getElementById('pauseBtn');
-    const playBtn = document.getElementById('playBtn');
-
-    pauseBtn.addEventListener('click', () => {
-      paused = true;
-      pauseBtn.disabled = true;
-      playBtn.disabled = false;
-    });
-
-    playBtn.addEventListener('click', () => {
-      paused = false;
-      pauseBtn.disabled = false;
-      playBtn.disabled = true;
-    });
+    // Tabla y datos
+    const tableBody = document.querySelector('#dataTable tbody');
+    const maxRows = 10;
+    const allData = [];
 
     client.on('connect', () => {
       console.log('Conectado al broker MQTT');
@@ -184,78 +122,60 @@
     });
 
     client.on('message', (topic, message) => {
-      if (topic === 'test/hivemq' && !paused) {
+      if (topic === 'test/hivemq') {
         const value = parseFloat(message.toString());
         if (!isNaN(value)) {
           const now = new Date();
-          const timeLabel = now.toLocaleTimeString();
-          const fullDate = now.toLocaleString();
+          const timeString = now.toLocaleTimeString();
+          const dateTimeString = now.toLocaleString();
 
-          // Actualizar gráfico
-          data.labels.push(timeLabel);
-          data.datasets[0].data.push(value);
+          // Actualizar tabla (todos los datos)
+          allData.push({ dateTime: dateTimeString, value: value });
 
-          if (data.labels.length > 20) {
-            data.labels.shift();
-            data.datasets[0].data.shift();
+          // Limitar tabla a últimos 10 datos
+          while (allData.length > maxRows) {
+            allData.shift();
           }
-          myChart.update();
+          renderTable();
 
-          // Guardar datos para tabla
-          allData.push({datetime: fullDate, value: value});
-          if(allData.length > 1000) allData.shift(); // limitar memoria
-
-          renderTablePage(currentPage);
-          updatePaginationButtons();
+          // Actualizar gráfico solo si no está pausado
+          if (!isPaused) {
+            data.labels.push(timeString);
+            data.datasets[0].data.push(value);
+            if (data.labels.length > 20) {
+              data.labels.shift();
+              data.datasets[0].data.shift();
+            }
+            myChart.update();
+          }
         }
       }
     });
 
-    // Tabla con paginación
-    const tableBody = document.querySelector('#dataTable tbody');
-    const prevPageBtn = document.getElementById('prevPage');
-    const nextPageBtn = document.getElementById('nextPage');
-    const pageInfo = document.getElementById('pageInfo');
-    const rowsPerPage = 10;
-    let currentPage = 1;
-
-    function renderTablePage(page) {
+    function renderTable() {
       tableBody.innerHTML = '';
-      const start = (page - 1) * rowsPerPage;
-      const end = start + rowsPerPage;
-      const pageData = allData.slice(start, end);
-      for (const row of pageData) {
-        const tr = document.createElement('tr');
-        const tdDate = document.createElement('td');
-        const tdValue = document.createElement('td');
-        tdDate.textContent = row.datetime;
-        tdValue.textContent = row.value.toFixed(2);
-        tr.appendChild(tdDate);
-        tr.appendChild(tdValue);
-        tableBody.appendChild(tr);
-      }
-      pageInfo.textContent = `Página ${currentPage}`;
+      allData.forEach(item => {
+        const row = document.createElement('tr');
+        const dateCell = document.createElement('td');
+        const valueCell = document.createElement('td');
+        dateCell.textContent = item.dateTime;
+        valueCell.textContent = item.value.toFixed(2);
+        row.appendChild(dateCell);
+        row.appendChild(valueCell);
+        tableBody.appendChild(row);
+      });
     }
 
-    function updatePaginationButtons() {
-      prevPageBtn.disabled = currentPage === 1;
-      nextPageBtn.disabled = currentPage * rowsPerPage >= allData.length;
-    }
-
-    prevPageBtn.addEventListener('click', () => {
-      if (currentPage > 1) {
-        currentPage--;
-        renderTablePage(currentPage);
-        updatePaginationButtons();
-      }
+    document.getElementById('btnPause').addEventListener('click', () => {
+      isPaused = true;
+      document.getElementById('btnPause').disabled = true;
+      document.getElementById('btnPlay').disabled = false;
     });
 
-    nextPageBtn.addEventListener('click', () => {
-      if (currentPage * rowsPerPage < allData.length) {
-        currentPage++;
-        renderTablePage(currentPage);
-        updatePaginationButtons();
-      }
+    document.getElementById('btnPlay').addEventListener('click', () => {
+      isPaused = false;
+      document.getElementById('btnPause').disabled = false;
+      document.getElementById('btnPlay').disabled = true;
     });
   </script>
 </body>
