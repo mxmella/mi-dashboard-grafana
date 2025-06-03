@@ -24,32 +24,23 @@
     h1 {
       text-align: center;
       margin-top: 0;
-      margin-bottom: 10px;
+      margin-bottom: 20px;
       color: white;
-    }
-    #label-y {
-      display: inline-block;
-      background-color: black;
-      padding: 5px 10px;
-      border-radius: 5px;
-      color: white;
-      font-weight: bold;
-      margin-bottom: 10px;
-      text-align: center;
     }
     canvas {
-      background-color: black; /* Fondo completamente negro */
+      background-color: black;
       border-radius: 10px;
       display: block;
       margin: 0 auto;
+      width: 900px !important;
+      height: 450px !important;
     }
   </style>
 </head>
 <body>
   <img id="logo-fijo" src="logo puerto.png" alt="Logo Puerto" />
   <h1>Velocidad del viento</h1>
-  <div id="label-y">Velocidad del viento (m/s)</div>
-  <canvas id="myChart" width="600" height="300"></canvas>
+  <canvas id="myChart" width="900" height="450"></canvas>
 
   <script>
     const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
@@ -63,7 +54,9 @@
         data: [],
         borderColor: 'rgb(75, 192, 192)',
         fill: false,
-        tension: 0.1
+        tension: 0.1,
+        pointRadius: 4,
+        pointHoverRadius: 6
       }]
     };
 
@@ -74,19 +67,19 @@
         animation: false,
         plugins: {
           legend: {
-            labels: { color: 'white' } // Color blanco para leyenda
+            labels: { color: 'white', font: { size: 14 } }
           }
         },
         scales: {
           x: {
-            title: { display: true, text: 'Hora', color: 'white' },
+            title: { display: true, text: 'Hora', color: 'white', font: { size: 16 } },
             ticks: { color: 'white' },
-            grid: { color: 'black' } // Oculta grid x
+            grid: { color: 'rgba(255,255,255,0.2)' } // líneas gris claro
           },
           y: {
-            title: { display: true, text: 'Velocidad del viento (m/s)', color: 'white' },
+            title: { display: true, text: 'Valor', color: 'white', font: { size: 16 } },
             ticks: { color: 'white' },
-            grid: { color: 'black' } // Oculta grid y
+            grid: { color: 'rgba(255,255,255,0.2)' } // líneas gris claro
           }
         }
       }
