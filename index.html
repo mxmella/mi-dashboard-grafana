@@ -185,7 +185,6 @@
       playBtn.disabled = true;
       btnRetroceder.style.display = 'none';
 
-      // Al reanudar mostramos los datos más recientes en gráfico y tabla
       currentPage = Math.max(1, Math.ceil(allData.length / rowsPerPage));
       updatePaginationButtons();
       renderTablePage(currentPage);
@@ -219,12 +218,9 @@
 
           updatePaginationButtons();
 
-          // Si estamos en modo pausa y en una página vieja, NO actualizar el gráfico en tiempo real
-          // Solo actualizar tabla, que siempre muestra currentPage
           renderTablePage(currentPage);
 
           if (!paused) {
-            // En tiempo real, mantener la página en la última y mostrar datos nuevos
             currentPage = Math.max(1, Math.ceil(allData.length / rowsPerPage));
             renderTablePage(currentPage);
             updateChartToPage(currentPage);
@@ -243,7 +239,7 @@
         currentPage--;
         updatePaginationButtons();
         renderTablePage(currentPage);
-        if (!paused) updateChartToPage(currentPage);
+        if (paused) updateChartToPage(currentPage);
       }
     });
 
@@ -253,7 +249,7 @@
         currentPage++;
         updatePaginationButtons();
         renderTablePage(currentPage);
-        if (!paused) updateChartToPage(currentPage);
+        if (paused) updateChartToPage(currentPage);
       }
     });
 
@@ -282,7 +278,6 @@
       nextPageBtn.disabled = currentPage === totalPages;
     }
 
-    // Actualiza el gráfico para mostrar solo los datos de la página dada
     function updateChartToPage(page) {
       const start = (page - 1) * rowsPerPage;
       const end = start + rowsPerPage;
