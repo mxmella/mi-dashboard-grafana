@@ -2,12 +2,38 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Gráfico MQTT en Tiempo Real</title>
+  <title>Velocidad del viento</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    #logo {
+      max-width: 200px;
+      margin-bottom: 20px;
+    }
+    #yAxisLabel {
+      background-color: black;
+      color: white;
+      display: inline-block;
+      padding: 5px 10px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-  <h1>Gráfico MQTT en Tiempo Real</h1>
+  <!-- Logo: reemplaza el src por la URL de tu logo -->
+  <img id="logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Wind_icon.svg/120px-Wind_icon.svg.png" alt="Logo Velocidad del viento" />
+
+  <h1>Velocidad del viento</h1>
+  <div id="yAxisLabel">Velocidad del viento (m/s)</div>
   <canvas id="myChart" width="600" height="300"></canvas>
 
   <script>
@@ -19,7 +45,7 @@
     const data = {
       labels: [], // etiquetas de tiempo
       datasets: [{
-        label: 'Valor MQTT',
+        label: 'Velocidad del viento (m/s)',
         data: [],
         borderColor: 'rgb(75, 192, 192)',
         fill: false,
@@ -37,7 +63,7 @@
             title: { display: true, text: 'Hora' }
           },
           y: {
-            title: { display: true, text: 'Valor' }
+            title: { display: false }
           }
         }
       }
