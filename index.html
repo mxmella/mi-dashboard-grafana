@@ -37,6 +37,7 @@
     }
     #controls {
       text-align: center;
+      margin-top: 10px;
       margin-bottom: 20px;
     }
     button {
@@ -51,9 +52,6 @@
     }
     button:hover {
       background-color: #36a3a3;
-    }
-    #btnRetroceder {
-      display: none; /* oculto inicialmente */
     }
     table {
       width: 900px;
@@ -95,13 +93,12 @@
   <img id="logo-fijo" src="logo puerto.png" alt="Logo Puerto" />
   <h1>Velocidad del viento</h1>
 
+  <canvas id="myChart" width="900" height="450"></canvas>
+
   <div id="controls">
     <button id="pauseBtn">Pausar</button>
     <button id="playBtn" disabled>Reanudar</button>
-    <button id="btnRetroceder">Retroceder</button>
   </div>
-
-  <canvas id="myChart" width="900" height="450"></canvas>
 
   <table id="dataTable">
     <thead>
@@ -164,40 +161,21 @@
     const myChart = new Chart(ctx, config);
 
     let paused = false;
-    let allData = [];
-    let currentPage = 1;
-    const rowsPerPage = 10;
+    let allData = []; // Guardar datos completos con timestamp
 
     const pauseBtn = document.getElementById('pauseBtn');
     const playBtn = document.getElementById('playBtn');
-    const btnRetroceder = document.getElementById('btnRetroceder');
 
     pauseBtn.addEventListener('click', () => {
       paused = true;
       pauseBtn.disabled = true;
       playBtn.disabled = false;
-      btnRetroceder.style.display = 'inline-block';
     });
 
     playBtn.addEventListener('click', () => {
       paused = false;
       pauseBtn.disabled = false;
       playBtn.disabled = true;
-      btnRetroceder.style.display = 'none';
-
-      currentPage = Math.max(1, Math.ceil(allData.length / rowsPerPage));
-      updatePaginationButtons();
-      renderTablePage(currentPage);
-      updateChartToPage(currentPage);
-    });
-
-    btnRetroceder.addEventListener('click', () => {
-      if (currentPage > 1) {
-        currentPage--;
-        updatePaginationButtons();
-        renderTablePage(currentPage);
-        updateChartToPage(currentPage);
-      }
     });
 
     client.on('connect', () => {
@@ -213,17 +191,23 @@
           const timeLabel = now.toLocaleTimeString();
           const fullDate = now.toLocaleString();
 
+          // Guardar datos para tabla SIEMPRE
           allData.push({datetime: fullDate, value: value});
-          if(allData.length > 1000) allData.shift();
-
-          updatePaginationButtons();
+          if(allData.length > 1000) allData.shift(); // limitar memoria
 
           renderTablePage(currentPage);
+          updatePaginationButtons();
 
+          // Actualizar gráfico SOLO si no está pausado
           if (!paused) {
-            currentPage = Math.max(1, Math.ceil(allData.length / rowsPerPage));
-            renderTablePage(currentPage);
-            updateChartToPage(currentPage);
+            data.labels.push(timeLabel);
+            data.datasets[0].data.push(value);
+
+            if (data.labels.length > 20) {
+              data.labels.shift();
+              data.datasets[0].data.shift();
+            }
+            myChart.update();
           }
         }
       }
@@ -233,25 +217,8 @@
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
     const pageInfo = document.getElementById('pageInfo');
-
-    prevPageBtn.addEventListener('click', () => {
-      if (currentPage > 1) {
-        currentPage--;
-        updatePaginationButtons();
-        renderTablePage(currentPage);
-        if (paused) updateChartToPage(currentPage);
-      }
-    });
-
-    nextPageBtn.addEventListener('click', () => {
-      const totalPages = Math.max(1, Math.ceil(allData.length / rowsPerPage));
-      if (currentPage < totalPages) {
-        currentPage++;
-        updatePaginationButtons();
-        renderTablePage(currentPage);
-        if (paused) updateChartToPage(currentPage);
-      }
-    });
+    const rowsPerPage = 10;
+    let currentPage = 1;
 
     function renderTablePage(page) {
       tableBody.innerHTML = '';
@@ -278,18 +245,21 @@
       nextPageBtn.disabled = currentPage === totalPages;
     }
 
-    function updateChartToPage(page) {
-      const start = (page - 1) * rowsPerPage;
-      const end = start + rowsPerPage;
-      const pageData = allData.slice(start, end);
+    prevPageBtn.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTablePage(currentPage);
+        updatePaginationButtons();
+      }
+    });
 
-      data.labels = pageData.map(d => {
-        const date = new Date(d.datetime);
-        return date.toLocaleTimeString();
-      });
-      data.datasets[0].data = pageData.map(d => d.value);
-      myChart.update();
-    }
+    nextPageBtn.addEventListener('click', () => {
+      if (currentPage * rowsPerPage < allData.length) {
+        currentPage++;
+        renderTablePage(currentPage);
+        updatePaginationButtons();
+      }
+    });
   </script>
 </body>
 </html>
