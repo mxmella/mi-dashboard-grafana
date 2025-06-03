@@ -7,38 +7,47 @@
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     body {
+      background-color: #121212;
+      color: white;
       font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #000000; /* fondo negro */
-      color: white; /* texto blanco */
       margin: 0;
       padding: 20px;
     }
-    #logo {
-      max-width: 200px;
-      margin-bottom: 20px;
+    #logo-fijo {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 80px;
+      height: auto;
+      z-index: 1000;
     }
-    #yAxisLabel {
-      background-color: black;
-      color: white;
+    h1 {
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    #label-y {
       display: inline-block;
+      background-color: black;
       padding: 5px 10px;
-      margin-bottom: 5px;
-      border-radius: 4px;
+      border-radius: 5px;
+      color: white;
       font-weight: bold;
+      margin-bottom: 10px;
+      text-align: center;
     }
-    /* Chart.js labels y ejes en blanco */
-    .chartjs-render-monitor {
-      background-color: #000;
+    canvas {
+      background-color: #222; /* Fondo negro para el gráfico */
+      border-radius: 10px;
+      display: block;
+      margin: 0 auto;
     }
   </style>
 </head>
 <body>
-  <!-- Logo personalizado -->
-  <img id="logo" src="https://www.puertocoronel.cl/wp-content/uploads/2023/03/LOGO-PORTUARIO-FINAL-Negro-01-e1679542064107.png" alt="Logo Velocidad del viento" />
-
+  <img id="logo-fijo" src="logo puerto.png" alt="Logo Puerto" />
   <h1>Velocidad del viento</h1>
-  <div id="yAxisLabel">Velocidad del viento (m/s)</div>
+  <div id="label-y">Velocidad del viento (m/s)</div>
   <canvas id="myChart" width="600" height="300"></canvas>
 
   <script>
@@ -47,13 +56,12 @@
     const ctx = document.getElementById('myChart').getContext('2d');
 
     const data = {
-      labels: [], // etiquetas de tiempo
+      labels: [], 
       datasets: [{
         label: 'Velocidad del viento (m/s)',
         data: [],
         borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        fill: true,
+        fill: false,
         tension: 0.1
       }]
     };
@@ -63,23 +71,15 @@
       data: data,
       options: {
         animation: false,
-        plugins: {
-          legend: {
-            labels: {
-              color: 'white' // color texto leyenda
-            }
-          }
-        },
         scales: {
           x: {
             title: { display: true, text: 'Hora', color: 'white' },
-            ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.1)' }
+            ticks: { color: 'white' }
           },
           y: {
-            title: { display: false },
+            title: { display: true, text: 'Velocidad del viento (m/s)', color: 'white', backgroundColor: 'black', padding: {top:5, bottom:5} },
             ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.1)' }
+            grid: { color: '#444' }
           }
         }
       }
@@ -88,7 +88,7 @@
     const myChart = new Chart(ctx, config);
 
     client.on('connect', () => {
-      console.log('Conectado al broker MQTT mqtt-dashboard.com');
+      console.log('Conectado al broker MQTT');
       client.subscribe('test/hivemq');
     });
 
@@ -109,10 +109,6 @@
           myChart.update();
         }
       }
-    });
-
-    client.on('error', (err) => {
-      console.error('Error de conexión MQTT:', err);
     });
   </script>
 </body>
