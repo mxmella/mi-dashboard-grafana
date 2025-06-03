@@ -1,334 +1,104 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <title>Comparativa Velocidad del Viento</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <style>
-    body {
-      background-color: black;
-      color: white;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-    }
-    #logo-fijo {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      width: 80px;
-      height: auto;
-      z-index: 1000;
-    }
-    h1 {
-      text-align: center;
-      margin-top: 0;
-      margin-bottom: 20px;
-      color: white;
-    }
-    canvas {
-      background-color: black;
-      border-radius: 10px;
-      display: block;
-      margin: 0 auto;
-      width: 900px !important;
-      height: 450px !important;
-    }
-    #controls {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    button {
-      background-color: #4bc0c0;
-      border: none;
-      color: black;
-      font-weight: bold;
-      padding: 10px 20px;
-      margin: 0 10px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #36a3a3;
-    }
-    #btnRetroceder {
-      display: none; /* oculto inicialmente */
-    }
-    table {
-      width: 900px;
-      margin: 0 auto;
-      border-collapse: collapse;
-      color: white;
-      font-size: 14px;
-    }
-    th, td {
-      border: 1px solid #555;
-      padding: 8px 12px;
-      text-align: center;
-    }
-    th {
-      background-color: #222;
-    }
-    #pagination {
-      text-align: center;
-      margin-top: 10px;
-      color: white;
-    }
-    #pagination button {
-      background-color: #4bc0c0;
-      border: none;
-      color: black;
-      font-weight: bold;
-      padding: 6px 12px;
-      margin: 0 5px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    #pagination button:disabled {
-      background-color: #777;
-      cursor: not-allowed;
-    }
-  </style>
-</head>
-<body>
-  <img id="logo-fijo" src="logo puerto.png" alt="Logo Puerto" />
-  <h1>Comparativa Velocidad del Viento</h1>
+// Suscribirse a todos los tópicos
+client.on('connect', () => {
+  console.log('Conectado al broker MQTT');
+  client.subscribe(['vientosts1', 'vientosts2', 'vientosts3', 'vientosts4', 'vientosts5']);
+});
 
-  <div id="controls">
-    <button id="pauseBtn">Pausar</button>
-    <button id="playBtn" disabled>Reanudar</button>
-    <button id="btnRetroceder">Retroceder</button>
-  </div>
-
-  <canvas id="myChart" width="900" height="450"></canvas>
-
-  <table id="dataTable">
-    <thead>
-      <tr>
-        <th>Fecha y Hora</th>
-        <th>Topic</th>
-        <th>Velocidad (m/s)</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <div id="pagination">
-    <button id="prevPage" disabled>Anterior</button>
-    <span id="pageInfo">Página 1 / 1</span>
-    <button id="nextPage" disabled>Siguiente</button>
-  </div>
-
-  <script>
-    const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
-    const ctx = document.getElementById('myChart').getContext('2d');
-
-    const topics = ['vientosts1', 'vientosts2', 'vientosts4', 'vientosts5'];
-    const colors = ['#4bc0c0', '#f54242', '#f5a142', '#42f554'];
-
-    // Map para almacenar datos por topic: { topic: [{datetime, value}] }
-    const topicData = {};
-    topics.forEach(t => topicData[t] = []);
-
-    // Datasets para Chart.js por topic
-    const datasets = topics.map((topic, i) => ({
-      label: topic,
+const data = {
+  labels: [], 
+  datasets: [
+    {
+      label: 'vientosts1',
       data: [],
-      borderColor: colors[i],
+      borderColor: 'rgb(255, 99, 132)', // rojo
       fill: false,
       tension: 0.1,
       pointRadius: 4,
       pointHoverRadius: 6
-    }));
+    },
+    {
+      label: 'vientosts2',
+      data: [],
+      borderColor: 'rgb(54, 162, 235)', // azul
+      fill: false,
+      tension: 0.1,
+      pointRadius: 4,
+      pointHoverRadius: 6
+    },
+    {
+      label: 'vientosts3',
+      data: [],
+      borderColor: 'rgb(255, 206, 86)', // amarillo
+      fill: false,
+      tension: 0.1,
+      pointRadius: 4,
+      pointHoverRadius: 6
+    },
+    {
+      label: 'vientosts4',
+      data: [],
+      borderColor: 'rgb(75, 192, 192)', // verde agua
+      fill: false,
+      tension: 0.1,
+      pointRadius: 4,
+      pointHoverRadius: 6
+    },
+    {
+      label: 'vientosts5',
+      data: [],
+      borderColor: 'rgb(153, 102, 255)', // morado
+      fill: false,
+      tension: 0.1,
+      pointRadius: 4,
+      pointHoverRadius: 6
+    }
+  ]
+};
 
-    const data = {
-      labels: [], // tiempos comunes
-      datasets: datasets
-    };
+client.on('message', (topic, message) => {
+  const value = parseFloat(message.toString());
+  if (!isNaN(value)) {
+    const now = new Date();
+    const timeLabel = now.toLocaleTimeString();
+    const fullDate = now.toLocaleString();
 
-    const config = {
-      type: 'line',
-      data: data,
-      options: {
-        animation: false,
-        plugins: {
-          legend: {
-            labels: { color: 'white', font: { size: 14 } }
-          }
-        },
-        scales: {
-          x: {
-            title: { display: true, text: 'Hora', color: 'white', font: { size: 16 } },
-            ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.2)' }
-          },
-          y: {
-            title: { display: true, text: 'Velocidad (m/s)', color: 'white', font: { size: 16 } },
-            ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.2)' }
-          }
-        }
-      }
-    };
-
-    const myChart = new Chart(ctx, config);
-
-    let paused = false;
-    let allData = []; // array con todos los datos: {datetime, topic, value}
-    let currentPage = 1;
-    const rowsPerPage = 10;
-
-    const pauseBtn = document.getElementById('pauseBtn');
-    const playBtn = document.getElementById('playBtn');
-    const btnRetroceder = document.getElementById('btnRetroceder');
-
-    pauseBtn.addEventListener('click', () => {
-      paused = true;
-      pauseBtn.disabled = true;
-      playBtn.disabled = false;
-      btnRetroceder.style.display = 'inline-block';
-    });
-
-    playBtn.addEventListener('click', () => {
-      paused = false;
-      pauseBtn.disabled = false;
-      playBtn.disabled = true;
-      btnRetroceder.style.display = 'none';
-
-      currentPage = Math.max(1, Math.ceil(allData.length / rowsPerPage));
-      updatePaginationButtons();
-      renderTablePage(currentPage);
-      updateChartToPage(currentPage);
-    });
-
-    btnRetroceder.addEventListener('click', () => {
-      if (currentPage > 1) {
-        currentPage--;
-        updatePaginationButtons();
-        renderTablePage(currentPage);
-        updateChartToPage(currentPage);
-      }
-    });
-
-    client.on('connect', () => {
-      console.log('Conectado al broker MQTT');
-      topics.forEach(topic => client.subscribe(topic));
-    });
-
-    client.on('message', (topic, message) => {
-      if (topics.includes(topic)) {
-        const value = parseFloat(message.toString());
-        if (!isNaN(value)) {
-          const now = new Date();
-          const fullDate = now.toLocaleString();
-
-          // Guardar datos globales
-          allData.push({datetime: fullDate, topic: topic, value: value});
-          if(allData.length > 1000) allData.shift();
-
-          // Guardar datos específicos por topic
-          topicData[topic].push({datetime: fullDate, value: value});
-          if(topicData[topic].length > 1000) topicData[topic].shift();
-
-          updatePaginationButtons();
-          renderTablePage(currentPage);
-
-          if (!paused) {
-            currentPage = Math.max(1, Math.ceil(allData.length / rowsPerPage));
-            renderTablePage(currentPage);
-            updateChartToPage(currentPage);
-          }
-        }
-      }
-    });
-
-    const tableBody = document.querySelector('#dataTable tbody');
-    const prevPageBtn = document.getElementById('prevPage');
-    const nextPageBtn = document.getElementById('nextPage');
-    const pageInfo = document.getElementById('pageInfo');
-
-    prevPageBtn.addEventListener('click', () => {
-      if (currentPage > 1) {
-        currentPage--;
-        updatePaginationButtons();
-        renderTablePage(currentPage);
-        if (paused) updateChartToPage(currentPage);
-      }
-    });
-
-    nextPageBtn.addEventListener('click', () => {
-      const totalPages = Math.max(1, Math.ceil(allData.length / rowsPerPage));
-      if (currentPage < totalPages) {
-        currentPage++;
-        updatePaginationButtons();
-        renderTablePage(currentPage);
-        if (paused) updateChartToPage(currentPage);
-      }
-    });
-
-    // Renderiza tabla con datos de la página actual
-    function renderTablePage(page) {
-      tableBody.innerHTML = '';
-      const start = (page - 1) * rowsPerPage;
-      const end = start + rowsPerPage;
-      const pageData = allData.slice(start, end);
-      for (const row of pageData) {
-        const tr = document.createElement('tr');
-        const tdDate = document.createElement('td');
-        const tdTopic = document.createElement('td');
-        const tdValue = document.createElement('td');
-        tdDate.textContent = row.datetime;
-        tdTopic.textContent = row.topic;
-        tdValue.textContent = row.value.toFixed(2);
-        tr.appendChild(tdDate);
-        tr.appendChild(tdTopic);
-        tr.appendChild(tdValue);
-        tableBody.appendChild(tr);
-      }
-      const totalPages = Math.max(1, Math.ceil(allData.length / rowsPerPage));
-      pageInfo.textContent = `Página ${currentPage} / ${totalPages}`;
+    // Guardar datos para tabla SIEMPRE - aquí, por simplicidad,
+    // guardamos solo datos del tópico 'vientosts1' en tabla (o puedes adaptar)
+    if (topic === 'vientosts1') {
+      allData.push({datetime: fullDate, value: value});
+      if(allData.length > 1000) allData.shift();
     }
 
-    // Actualiza botones paginación
-    function updatePaginationButtons() {
-      const totalPages = Math.max(1, Math.ceil(allData.length / rowsPerPage));
-      prevPageBtn.disabled = currentPage === 1;
-      nextPageBtn.disabled = currentPage === totalPages;
-    }
+    updatePaginationButtons();
+    renderTablePage(currentPage);
 
-    // Actualiza gráfico para la página dada, mostrando datos de todos los topics
-    function updateChartToPage(page) {
-      const start = (page - 1) * rowsPerPage;
-      const end = start + rowsPerPage;
-      const pageData = allData.slice(start, end);
+    if (!paused) {
+      // Solo agregar la nueva hora una vez (para sincronizar los datasets)
+      if (!data.labels.includes(timeLabel)) {
+        data.labels.push(timeLabel);
+        if (data.labels.length > 20) {
+          data.labels.shift();
+        }
+      }
 
-      // Creamos etiquetas (horas) únicas en orden
-      const labelsSet = new Set();
-      pageData.forEach(d => {
-        const date = new Date(d.datetime);
-        labelsSet.add(date.toLocaleTimeString());
-      });
-      const labels = Array.from(labelsSet);
+      // Encuentra índice del dataset según topic
+      const datasetIndex = {
+        'vientosts1': 0,
+        'vientosts2': 1,
+        'vientosts3': 2,
+        'vientosts4': 3,
+        'vientosts5': 4
+      }[topic];
 
-      data.labels = labels;
-
-      // Para cada dataset/topic, rellenamos datos para esas etiquetas
-      datasets.forEach(ds => ds.data = []);
-
-      labels.forEach(label => {
-        datasets.forEach((ds, i) => {
-          // Buscar valor para ese topic y hora
-          const found = pageData.find(d => {
-            const dt = new Date(d.datetime).toLocaleTimeString();
-            return d.topic === ds.label && dt === label;
-          });
-          ds.data.push(found ? found.value : null);
-        });
-      });
+      if (datasetIndex !== undefined) {
+        data.datasets[datasetIndex].data.push(value);
+        if (data.datasets[datasetIndex].data.length > 20) {
+          data.datasets[datasetIndex].data.shift();
+        }
+      }
 
       myChart.update();
     }
-  </script>
-</body>
-</html>
+  }
+});
+
