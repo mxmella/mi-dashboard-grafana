@@ -184,29 +184,31 @@
     });
 
     client.on('message', (topic, message) => {
-      if (topic === 'test/hivemq' && !paused) {
+      if (topic === 'test/hivemq') {
         const value = parseFloat(message.toString());
         if (!isNaN(value)) {
           const now = new Date();
           const timeLabel = now.toLocaleTimeString();
           const fullDate = now.toLocaleString();
 
-          // Actualizar gráfico
-          data.labels.push(timeLabel);
-          data.datasets[0].data.push(value);
-
-          if (data.labels.length > 20) {
-            data.labels.shift();
-            data.datasets[0].data.shift();
-          }
-          myChart.update();
-
-          // Guardar datos para tabla
+          // Guardar datos para tabla SIEMPRE
           allData.push({datetime: fullDate, value: value});
           if(allData.length > 1000) allData.shift(); // limitar memoria
 
           renderTablePage(currentPage);
           updatePaginationButtons();
+
+          // Actualizar gráfico SOLO si no está pausado
+          if (!paused) {
+            data.labels.push(timeLabel);
+            data.datasets[0].data.push(value);
+
+            if (data.labels.length > 20) {
+              data.labels.shift();
+              data.datasets[0].data.shift();
+            }
+            myChart.update();
+          }
         }
       }
     });
@@ -260,4 +262,3 @@
   </script>
 </body>
 </html>
-
