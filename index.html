@@ -1,8 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Gráfico MQTT en Tiempo Real</title>
+  <title>Velocidad del viento</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
@@ -10,30 +11,52 @@
       background-color: black;
       color: white;
       font-family: Arial, sans-serif;
-      text-align: center;
+      margin: 0;
       padding: 20px;
     }
-    #myChart {
-      max-width: 90%;
-      margin: auto;
-      display: block;
+    #logo-fijo {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 80px;
+      height: auto;
+      z-index: 1000;
     }
-    button {
-      margin: 10px 5px;
+    h1 {
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: white;
+    }
+    canvas {
+      background-color: black;
+      border-radius: 10px;
+      display: block;
+      margin: 0 auto;
+      width: 900px !important;
+      height: 450px !important;
+    }
+    #controls {
+      text-align: center;
+      margin-top: 15px;
+      margin-bottom: 20px;
+    }
+    #controls button {
+      margin: 0 10px;
       padding: 10px 20px;
-      font-size: 16px;
+      font-weight: bold;
       cursor: pointer;
     }
     table {
-      width: 90%;
-      margin: 20px auto;
+      width: 900px;
+      margin: 0 auto;
       border-collapse: collapse;
-      background-color: #111;
       color: white;
+      font-size: 14px;
     }
     th, td {
-      border: 1px solid #444;
-      padding: 8px;
+      border: 1px solid #555;
+      padding: 8px 12px;
       text-align: center;
     }
     th {
@@ -42,23 +65,24 @@
   </style>
 </head>
 <body>
+  <img id="logo-fijo" src="logo puerto.png" alt="Logo Puerto" />
   <h1>Velocidad del viento</h1>
-  <canvas id="myChart" width="800" height="400"></canvas>
-  <div>
-    <button id="btnPause">Pausar gráfico</button>
-    <button id="btnPlay" disabled>Reanudar gráfico</button>
+
+  <canvas id="myChart" width="900" height="450"></canvas>
+
+  <div id="controls">
+    <button id="pauseBtn">Pausar</button>
+    <button id="playBtn" disabled>Reanudar</button>
   </div>
-  
+
   <table id="dataTable">
     <thead>
       <tr>
         <th>Fecha y Hora</th>
-        <th>Valor (m/s)</th>
+        <th>Velocidad del viento (m/s)</th>
       </tr>
     </thead>
-    <tbody>
-      <!-- Aquí van los datos -->
-    </tbody>
+    <tbody></tbody>
   </table>
 
   <script>
@@ -67,9 +91,9 @@
     const ctx = document.getElementById('myChart').getContext('2d');
 
     const data = {
-      labels: [],
+      labels: [], 
       datasets: [{
-        label: 'Velocidad del viento',
+        label: 'Velocidad del viento (m/s)',
         data: [],
         borderColor: 'rgb(75, 192, 192)',
         fill: false,
@@ -82,25 +106,21 @@
       data: data,
       options: {
         animation: false,
-        scales: {
-          x: {
-            title: { display: true, text: 'Hora' },
-            ticks: {
-              color: 'white'
-            }
-          },
-          y: {
-            title: { display: true, text: 'Velocidad del viento (m/s)' },
-            ticks: {
-              color: 'white'
-            }
-          }
-        },
         plugins: {
           legend: {
-            labels: {
-              color: 'white'
-            }
+            labels: { color: 'white' }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Hora', color: 'white' },
+            ticks: { color: 'white' },
+            grid: { color: 'rgba(255,255,255,0.2)' }
+          },
+          y: {
+            title: { display: true, text: 'Velocidad del viento (m/s)', color: 'white' },
+            ticks: { color: 'white' },
+            grid: { color: 'rgba(255,255,255,0.2)' }
           }
         }
       }
@@ -108,13 +128,21 @@
 
     const myChart = new Chart(ctx, config);
 
-    // Variables para controlar el estado del gráfico
-    let isPaused = false;
-
-    // Tabla y datos
+    let paused = false;
     const tableBody = document.querySelector('#dataTable tbody');
-    const maxRows = 10;
     const allData = [];
+
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+      paused = true;
+      document.getElementById('pauseBtn').disabled = true;
+      document.getElementById('playBtn').disabled = false;
+    });
+
+    document.getElementById('playBtn').addEventListener('click', () => {
+      paused = false;
+      document.getElementById('pauseBtn').disabled = false;
+      document.getElementById('playBtn').disabled = true;
+    });
 
     client.on('connect', () => {
       console.log('Conectado al broker MQTT');
@@ -125,22 +153,18 @@
       if (topic === 'test/hivemq') {
         const value = parseFloat(message.toString());
         if (!isNaN(value)) {
-          const now = new Date();
-          const timeString = now.toLocaleTimeString();
-          const dateTimeString = now.toLocaleString();
+          const now = new Date().toLocaleTimeString();
+          const fullDate = new Date().toLocaleString();
 
-          // Actualizar tabla (todos los datos)
-          allData.push({ dateTime: dateTimeString, value: value });
+          // Guardar para tabla
+          allData.push({ datetime: fullDate, value: value });
+          if (allData.length > 1000) allData.shift(); // limitar tamaño
 
-          // Limitar tabla a últimos 10 datos
-          while (allData.length > maxRows) {
-            allData.shift();
-          }
           renderTable();
 
-          // Actualizar gráfico solo si no está pausado
-          if (!isPaused) {
-            data.labels.push(timeString);
+          if (!paused) {
+            // Actualizar gráfico
+            data.labels.push(now);
             data.datasets[0].data.push(value);
             if (data.labels.length > 20) {
               data.labels.shift();
@@ -154,29 +178,17 @@
 
     function renderTable() {
       tableBody.innerHTML = '';
-      allData.forEach(item => {
-        const row = document.createElement('tr');
-        const dateCell = document.createElement('td');
-        const valueCell = document.createElement('td');
-        dateCell.textContent = item.dateTime;
-        valueCell.textContent = item.value.toFixed(2);
-        row.appendChild(dateCell);
-        row.appendChild(valueCell);
-        tableBody.appendChild(row);
+      allData.slice(-10).forEach(item => {
+        const tr = document.createElement('tr');
+        const tdDate = document.createElement('td');
+        const tdValue = document.createElement('td');
+        tdDate.textContent = item.datetime;
+        tdValue.textContent = item.value.toFixed(2);
+        tr.appendChild(tdDate);
+        tr.appendChild(tdValue);
+        tableBody.appendChild(tr);
       });
     }
-
-    document.getElementById('btnPause').addEventListener('click', () => {
-      isPaused = true;
-      document.getElementById('btnPause').disabled = true;
-      document.getElementById('btnPlay').disabled = false;
-    });
-
-    document.getElementById('btnPlay').addEventListener('click', () => {
-      isPaused = false;
-      document.getElementById('btnPause').disabled = false;
-      document.getElementById('btnPlay').disabled = true;
-    });
   </script>
 </body>
 </html>
