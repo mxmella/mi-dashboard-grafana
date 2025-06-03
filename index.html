@@ -104,6 +104,7 @@
     <thead>
       <tr>
         <th>Fecha y Hora</th>
+        <th>Tópico</th>
         <th>Velocidad del viento (m/s)</th>
       </tr>
     </thead>
@@ -120,14 +121,13 @@
     const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
     const ctx = document.getElementById('myChart').getContext('2d');
 
-    // 5 datasets para los 5 tópicos
     const data = {
       labels: [], 
       datasets: [
         {
           label: 'vientosts1',
           data: [],
-          borderColor: 'rgb(255, 99, 132)', // rojo
+          borderColor: 'rgb(255, 99, 132)',
           fill: false,
           tension: 0.1,
           pointRadius: 4,
@@ -136,7 +136,7 @@
         {
           label: 'vientosts2',
           data: [],
-          borderColor: 'rgb(54, 162, 235)', // azul
+          borderColor: 'rgb(54, 162, 235)',
           fill: false,
           tension: 0.1,
           pointRadius: 4,
@@ -145,7 +145,7 @@
         {
           label: 'vientosts3',
           data: [],
-          borderColor: 'rgb(255, 206, 86)', // amarillo
+          borderColor: 'rgb(255, 206, 86)',
           fill: false,
           tension: 0.1,
           pointRadius: 4,
@@ -154,7 +154,7 @@
         {
           label: 'vientosts4',
           data: [],
-          borderColor: 'rgb(75, 192, 192)', // verde aqua
+          borderColor: 'rgb(75, 192, 192)',
           fill: false,
           tension: 0.1,
           pointRadius: 4,
@@ -163,7 +163,7 @@
         {
           label: 'vientosts5',
           data: [],
-          borderColor: 'rgb(153, 102, 255)', // morado
+          borderColor: 'rgb(153, 102, 255)',
           fill: false,
           tension: 0.1,
           pointRadius: 4,
@@ -200,7 +200,7 @@
     const myChart = new Chart(ctx, config);
 
     let paused = false;
-    let allData = []; // Solo guardamos datos de vientosts1 para tabla
+    let allData = [];
 
     const pauseBtn = document.getElementById('pauseBtn');
     const playBtn = document.getElementById('playBtn');
@@ -217,7 +217,6 @@
       playBtn.disabled = true;
     });
 
-    // Suscribir a los 5 tópicos
     client.on('connect', () => {
       console.log('Conectado al broker MQTT');
       client.subscribe(['vientosts1', 'vientosts2', 'vientosts3', 'vientosts4', 'vientosts5']);
@@ -230,17 +229,13 @@
         const timeLabel = now.toLocaleTimeString();
         const fullDate = now.toLocaleString();
 
-        // Guardar solo los datos de vientosts1 en tabla
-        if (topic === 'vientosts1') {
-          allData.push({datetime: fullDate, value: value});
-          if(allData.length > 1000) allData.shift();
-        }
+        allData.push({datetime: fullDate, topic: topic, value: value});
+        if(allData.length > 1000) allData.shift();
 
         renderTablePage(currentPage);
         updatePaginationButtons();
 
         if (!paused) {
-          // Añadir label solo una vez por nueva hora (sin duplicados)
           if (!data.labels.includes(timeLabel)) {
             data.labels.push(timeLabel);
             if (data.labels.length > 20) {
@@ -283,10 +278,13 @@
       for (const row of pageData) {
         const tr = document.createElement('tr');
         const tdDate = document.createElement('td');
+        const tdTopic = document.createElement('td');
         const tdValue = document.createElement('td');
         tdDate.textContent = row.datetime;
+        tdTopic.textContent = row.topic;
         tdValue.textContent = row.value.toFixed(2);
         tr.appendChild(tdDate);
+        tr.appendChild(tdTopic);
         tr.appendChild(tdValue);
         tableBody.appendChild(tr);
       }
@@ -318,4 +316,3 @@
   </script>
 </body>
 </html>
-
