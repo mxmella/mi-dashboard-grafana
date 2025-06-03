@@ -2,17 +2,34 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Dashboard MQTT en vivo</title>
+  <title>Dashboard MQTT en Vivo</title>
   <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
     iframe {
-      width: 100%;
+      display: block;
+      margin: 0 auto;
+      width: 90%;
       height: 600px;
-      border: none;
+      border: 1px solid #ccc;
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
-  <h1>Dashboard MQTT en vivo</h1>
-  <iframe src="https://mqtt-dashboard.com/d/tu_dashboard_id?orgId=1&refresh=5s"></iframe>
+  <h1>Dashboard MQTT en Vivo</h1>
+
+  <iframe
+    src="https://mqtt-dashboard.com/dashboard/clientId-tRtBPtjmGR?topic=test/hivemq"
+    allowfullscreen
+  ></iframe>
+
 </body>
 </html>
