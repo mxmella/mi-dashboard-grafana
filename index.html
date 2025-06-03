@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Velocidad del viento</title>
+  <title>Medidor de energía CGE</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
@@ -91,7 +91,7 @@
 </head>
 <body>
   <img id="logo-fijo" src="logo puerto.png" alt="Logo Puerto" />
-  <h1>Velocidad del viento</h1>
+  <h1>Medidor de energía CGE</h1>
 
   <canvas id="myChart" width="900" height="450"></canvas>
 
@@ -104,8 +104,7 @@
     <thead>
       <tr>
         <th>Fecha y Hora</th>
-        <th>Tópico</th>
-        <th>Velocidad del viento (m/s)</th>
+        <th>Valor Medidor CGE</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -123,53 +122,15 @@
 
     const data = {
       labels: [], 
-      datasets: [
-        {
-          label: 'vientosts1',
-          data: [],
-          borderColor: 'rgb(255, 99, 132)',
-          fill: false,
-          tension: 0.1,
-          pointRadius: 4,
-          pointHoverRadius: 6
-        },
-        {
-          label: 'vientosts2',
-          data: [],
-          borderColor: 'rgb(54, 162, 235)',
-          fill: false,
-          tension: 0.1,
-          pointRadius: 4,
-          pointHoverRadius: 6
-        },
-        {
-          label: 'vientosts3',
-          data: [],
-          borderColor: 'rgb(255, 206, 86)',
-          fill: false,
-          tension: 0.1,
-          pointRadius: 4,
-          pointHoverRadius: 6
-        },
-        {
-          label: 'vientosts4',
-          data: [],
-          borderColor: 'rgb(75, 192, 192)',
-          fill: false,
-          tension: 0.1,
-          pointRadius: 4,
-          pointHoverRadius: 6
-        },
-        {
-          label: 'vientosts5',
-          data: [],
-          borderColor: 'rgb(153, 102, 255)',
-          fill: false,
-          tension: 0.1,
-          pointRadius: 4,
-          pointHoverRadius: 6
-        }
-      ]
+      datasets: [{
+        label: 'Medidor CGE (kWh)', 
+        data: [],
+        borderColor: 'rgb(75, 192, 192)',
+        fill: false,
+        tension: 0.1,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
     };
 
     const config = {
@@ -189,7 +150,7 @@
             grid: { color: 'rgba(255,255,255,0.2)' }
           },
           y: {
-            title: { display: true, text: 'Valor', color: 'white', font: { size: 16 } },
+            title: { display: true, text: 'Valor (kWh)', color: 'white', font: { size: 16 } },
             ticks: { color: 'white' },
             grid: { color: 'rgba(255,255,255,0.2)' }
           }
@@ -219,46 +180,33 @@
 
     client.on('connect', () => {
       console.log('Conectado al broker MQTT');
-      client.subscribe(['vientosts1', 'vientosts2', 'vientosts3', 'vientosts4', 'vientosts5']);
+      client.subscribe('MEDIDOR_CGE');
     });
 
     client.on('message', (topic, message) => {
-      const value = parseFloat(message.toString());
-      if (!isNaN(value)) {
-        const now = new Date();
-        const timeLabel = now.toLocaleTimeString();
-        const fullDate = now.toLocaleString();
+      if (topic === 'MEDIDOR_CGE') {
+        const value = parseFloat(message.toString());
+        if (!isNaN(value)) {
+          const now = new Date();
+          const timeLabel = now.toLocaleTimeString();
+          const fullDate = now.toLocaleString();
 
-        allData.push({datetime: fullDate, topic: topic, value: value});
-        if(allData.length > 1000) allData.shift();
+          allData.push({datetime: fullDate, value: value});
+          if(allData.length > 1000) allData.shift();
 
-        renderTablePage(currentPage);
-        updatePaginationButtons();
+          renderTablePage(currentPage);
+          updatePaginationButtons();
 
-        if (!paused) {
-          if (!data.labels.includes(timeLabel)) {
+          if (!paused) {
             data.labels.push(timeLabel);
+            data.datasets[0].data.push(value);
+
             if (data.labels.length > 20) {
               data.labels.shift();
+              data.datasets[0].data.shift();
             }
+            myChart.update();
           }
-
-          const datasetIndex = {
-            'vientosts1': 0,
-            'vientosts2': 1,
-            'vientosts3': 2,
-            'vientosts4': 3,
-            'vientosts5': 4
-          }[topic];
-
-          if (datasetIndex !== undefined) {
-            data.datasets[datasetIndex].data.push(value);
-            if (data.datasets[datasetIndex].data.length > 20) {
-              data.datasets[datasetIndex].data.shift();
-            }
-          }
-
-          myChart.update();
         }
       }
     });
@@ -278,13 +226,10 @@
       for (const row of pageData) {
         const tr = document.createElement('tr');
         const tdDate = document.createElement('td');
-        const tdTopic = document.createElement('td');
         const tdValue = document.createElement('td');
         tdDate.textContent = row.datetime;
-        tdTopic.textContent = row.topic;
         tdValue.textContent = row.value.toFixed(2);
         tr.appendChild(tdDate);
-        tr.appendChild(tdTopic);
         tr.appendChild(tdValue);
         tableBody.appendChild(tr);
       }
