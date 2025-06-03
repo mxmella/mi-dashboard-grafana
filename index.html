@@ -9,7 +9,8 @@
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      background-color: #f4f4f4;
+      background-color: #000000; /* fondo negro */
+      color: white; /* texto blanco */
       margin: 0;
       padding: 20px;
     }
@@ -26,18 +27,21 @@
       border-radius: 4px;
       font-weight: bold;
     }
+    /* Chart.js labels y ejes en blanco */
+    .chartjs-render-monitor {
+      background-color: #000;
+    }
   </style>
 </head>
 <body>
-  <!-- Logo: reemplaza el src por la URL de tu logo -->
-  <img id="logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Wind_icon.svg/120px-Wind_icon.svg.png" alt="Logo Velocidad del viento" />
+  <!-- Logo personalizado -->
+  <img id="logo" src="https://www.puertocoronel.cl/wp-content/uploads/2023/03/LOGO-PORTUARIO-FINAL-Negro-01-e1679542064107.png" alt="Logo Velocidad del viento" />
 
   <h1>Velocidad del viento</h1>
   <div id="yAxisLabel">Velocidad del viento (m/s)</div>
   <canvas id="myChart" width="600" height="300"></canvas>
 
   <script>
-    // Conectarse al broker MQTT público mqtt-dashboard.com
     const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
 
     const ctx = document.getElementById('myChart').getContext('2d');
@@ -48,7 +52,8 @@
         label: 'Velocidad del viento (m/s)',
         data: [],
         borderColor: 'rgb(75, 192, 192)',
-        fill: false,
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        fill: true,
         tension: 0.1
       }]
     };
@@ -58,12 +63,23 @@
       data: data,
       options: {
         animation: false,
+        plugins: {
+          legend: {
+            labels: {
+              color: 'white' // color texto leyenda
+            }
+          }
+        },
         scales: {
           x: {
-            title: { display: true, text: 'Hora' }
+            title: { display: true, text: 'Hora', color: 'white' },
+            ticks: { color: 'white' },
+            grid: { color: 'rgba(255,255,255,0.1)' }
           },
           y: {
-            title: { display: false }
+            title: { display: false },
+            ticks: { color: 'white' },
+            grid: { color: 'rgba(255,255,255,0.1)' }
           }
         }
       }
@@ -73,7 +89,7 @@
 
     client.on('connect', () => {
       console.log('Conectado al broker MQTT mqtt-dashboard.com');
-      client.subscribe('test/hivemq'); // suscribirse al tópico
+      client.subscribe('test/hivemq');
     });
 
     client.on('message', (topic, message) => {
@@ -82,11 +98,9 @@
         if (!isNaN(value)) {
           const now = new Date().toLocaleTimeString();
 
-          // Añadir datos al gráfico
           data.labels.push(now);
           data.datasets[0].data.push(value);
 
-          // Limitar a los últimos 20 datos
           if (data.labels.length > 20) {
             data.labels.shift();
             data.datasets[0].data.shift();
@@ -103,3 +117,4 @@
   </script>
 </body>
 </html>
+
