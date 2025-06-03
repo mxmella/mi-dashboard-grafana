@@ -111,7 +111,7 @@
 
   <div id="pagination">
     <button id="prevPage" disabled>Anterior</button>
-    <span id="pageInfo">Página 1</span>
+    <span id="pageInfo">Página 1 / 1</span>
     <button id="nextPage" disabled>Siguiente</button>
   </div>
 
@@ -162,7 +162,6 @@
     let paused = false;
     let allData = []; // Guardar datos completos con timestamp
 
-    // Botones
     const pauseBtn = document.getElementById('pauseBtn');
     const playBtn = document.getElementById('playBtn');
 
@@ -213,7 +212,6 @@
       }
     });
 
-    // Tabla con paginación
     const tableBody = document.querySelector('#dataTable tbody');
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
@@ -236,12 +234,14 @@
         tr.appendChild(tdValue);
         tableBody.appendChild(tr);
       }
-      pageInfo.textContent = `Página ${currentPage}`;
+      const totalPages = Math.max(1, Math.ceil(allData.length / rowsPerPage));
+      pageInfo.textContent = `Página ${currentPage} / ${totalPages}`;
     }
 
     function updatePaginationButtons() {
+      const totalPages = Math.max(1, Math.ceil(allData.length / rowsPerPage));
       prevPageBtn.disabled = currentPage === 1;
-      nextPageBtn.disabled = currentPage * rowsPerPage >= allData.length;
+      nextPageBtn.disabled = currentPage === totalPages;
     }
 
     prevPageBtn.addEventListener('click', () => {
