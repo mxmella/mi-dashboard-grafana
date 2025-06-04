@@ -9,8 +9,8 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
 
     body {
-      background-color: #0b1e3d; /* Azul oscuro Puerto Coronel */
-      color: #f0f0f0;
+      background-color: #fff;
+      color: #333;
       font-family: 'Inter', sans-serif;
       margin: 0;
       padding: 30px 20px;
@@ -23,25 +23,24 @@
       position: fixed;
       top: 15px;
       left: 15px;
-      width: 120px;
+      width: 150px;
       height: auto;
       z-index: 1000;
-      filter: drop-shadow(0 0 5px rgba(0,0,0,0.7));
+      filter: drop-shadow(0 0 5px rgba(0,0,0,0.1));
     }
     h1 {
       margin-top: 0;
       margin-bottom: 25px;
-      color: #ffc72c; /* Amarillo Puerto Coronel */
+      color: #0a3d66; /* Azul oscuro serio */
       font-weight: 700;
       font-size: 2.5rem;
       text-align: center;
       user-select: none;
-      text-shadow: 0 0 8px rgba(255, 199, 44, 0.7);
     }
     canvas {
-      background-color: #144372; /* Azul medio */
+      background-color: #f5faff; /* celeste muy claro */
       border-radius: 12px;
-      box-shadow: 0 0 20px rgba(255, 199, 44, 0.25);
+      box-shadow: 0 0 15px rgba(10, 61, 102, 0.2);
       display: block;
       margin: 0 auto 25px auto;
       width: 900px !important;
@@ -53,59 +52,58 @@
     }
     button {
       background: none;
-      border: none;
+      border: 2px solid #0a3d66;
+      color: #0a3d66;
       cursor: pointer;
       margin: 0 12px;
       padding: 8px;
-      filter: drop-shadow(0 0 1.5px rgba(255, 199, 44, 0.9));
-      transition: filter 0.3s ease;
+      border-radius: 6px;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
     button:hover:not(:disabled) {
-      filter: drop-shadow(0 0 8px rgba(255, 199, 44, 1));
+      background-color: #0a3d66;
+      color: #fff;
     }
     button:disabled {
-      filter: none;
+      border-color: #bbb;
+      color: #bbb;
       cursor: not-allowed;
-      opacity: 0.5;
+      opacity: 0.7;
     }
     svg {
       width: 32px;
       height: 32px;
-      fill: #ffc72c;
+      fill: currentColor;
       user-select: none;
     }
     table {
       width: 900px;
       border-collapse: separate;
       border-spacing: 0 8px;
-      color: #f0f0f0;
+      color: #333;
       font-size: 16px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 15px rgba(10, 61, 102, 0.15);
       border-radius: 12px;
       overflow: hidden;
+      background: #fafcff;
     }
     thead tr {
-      background-color: #0a1628;
+      background-color: #0a3d66;
+      color: #fff;
       text-align: left;
       user-select: none;
     }
     th, td {
       padding: 14px 20px;
     }
-    th {
-      font-weight: 600;
-      font-size: 1rem;
-      color: #ffc72c;
-      border-bottom: 2px solid #ffc72c;
-    }
     tbody tr {
-      background-color: #10375c;
+      background-color: #e6f0fc;
       transition: background-color 0.2s ease;
       border-radius: 10px;
       user-select: text;
     }
     tbody tr:hover {
-      background-color: #215a94;
+      background-color: #c7dbf8;
     }
     tbody tr td {
       border-bottom: none;
@@ -116,14 +114,14 @@
       justify-content: center;
       align-items: center;
       margin-top: 18px;
-      color: #f0f0f0;
+      color: #0a3d66;
       font-size: 1rem;
       user-select: none;
       gap: 15px;
     }
     #pageInfo {
       font-weight: 600;
-      color: #ffc72c;
+      color: #0a3d66;
     }
   </style>
 </head>
@@ -135,14 +133,12 @@
 
   <div id="controls">
     <button id="pauseBtn" title="Pausar">
-      <!-- Icono pausa -->
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <rect x="6" y="5" width="4" height="14"></rect>
         <rect x="14" y="5" width="4" height="14"></rect>
       </svg>
     </button>
     <button id="playBtn" title="Reanudar" disabled>
-      <!-- Icono play -->
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <polygon points="8,5 19,12 8,19"></polygon>
       </svg>
@@ -161,14 +157,12 @@
 
   <div id="pagination">
     <button id="prevPage" disabled title="Anterior">
-      <!-- Icono izquierda -->
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <polygon points="15,6 9,12 15,18"></polygon>
       </svg>
     </button>
     <span id="pageInfo">Página 1 / 1</span>
     <button id="nextPage" disabled title="Siguiente">
-      <!-- Icono derecha -->
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <polygon points="9,6 15,12 9,18"></polygon>
       </svg>
@@ -184,8 +178,8 @@
       datasets: [{
         label: 'Medidor CGE (kWh)', 
         data: [],
-        borderColor: '#ffc72c',
-        backgroundColor: 'rgba(255, 199, 44, 0.3)',
+        borderColor: '#0a72c1',
+        backgroundColor: 'rgba(10, 114, 193, 0.3)',
         fill: true,
         tension: 0.3,
         pointRadius: 5,
@@ -203,26 +197,26 @@
         responsive: true,
         plugins: {
           legend: {
-            labels: { color: '#ffd54f', font: { size: 16, weight: 'bold' } }
+            labels: { color: '#0a3d66', font: { size: 16, weight: 'bold' } }
           },
           tooltip: {
             mode: 'index',
             intersect: false,
-            backgroundColor: '#b28800',
+            backgroundColor: '#0a72c1',
             titleFont: { size: 16, weight: 'bold' },
             bodyFont: { size: 14 }
           }
         },
         scales: {
           x: {
-            title: { display: true, text: 'Hora', color: '#ffd54f', font: { size: 18, weight: 'bold' } },
-            ticks: { color: '#ffecb3', maxRotation: 45, minRotation: 30 },
-            grid: { color: 'rgba(255, 235, 59, 0.15)' }
+            title: { display: true, text: 'Hora', color: '#0a3d66', font: { size: 18, weight: 'bold' } },
+            ticks: { color: '#0a3d66', maxRotation: 45, minRotation: 30 },
+            grid: { color: 'rgba(10, 61, 102, 0.15)' }
           },
           y: {
-            title: { display: true, text: 'Valor (kWh)', color: '#ffd54f', font: { size: 18, weight: 'bold' } },
-            ticks: { color: '#ffecb3' },
-            grid: { color: 'rgba(255, 235, 59, 0.15)' }
+            title: { display: true, text: 'Valor (kWh)', color: '#0a3d66', font: { size: 18, weight: 'bold' } },
+            ticks: { color: '#0a3d66' },
+            grid: { color: 'rgba(10, 61, 102, 0.15)' }
           }
         },
         interaction: {
