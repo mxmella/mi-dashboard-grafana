@@ -12,7 +12,6 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
 
-    /* Variables CSS para temas claro/oscuro */
     :root {
       --color-bg-light: #fff;
       --color-text-light: #333;
@@ -279,29 +278,29 @@
 
   <canvas id="myChart" width="900" height="450"></canvas>
 
-  <div id="controls">
-    <button id="pauseBtn" title="Pausar">
+  <div id="controls" role="group" aria-label="Controles del gráfico y navegación">
+    <button id="pauseBtn" title="Pausar" aria-pressed="false" aria-label="Pausar gráfico">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <rect x="6" y="5" width="4" height="14"></rect>
         <rect x="14" y="5" width="4" height="14"></rect>
       </svg>
     </button>
-    <button id="playBtn" title="Reanudar" disabled>
+    <button id="playBtn" title="Reanudar" disabled aria-pressed="true" aria-label="Reanudar gráfico">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <polygon points="8,5 19,12 8,19"></polygon>
       </svg>
     </button>
-    <button id="backBtn" title="Retroceder" style="display:none;">
+    <button id="backBtn" title="Retroceder" style="display:none;" aria-label="Retroceder en gráfico">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <polygon points="15,6 9,12 15,18"></polygon>
       </svg>
     </button>
-    <button id="forwardBtn" title="Adelantar" style="display:none;">
+    <button id="forwardBtn" title="Adelantar" style="display:none;" aria-label="Adelantar en gráfico">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <polygon points="9,6 15,12 9,18"></polygon>
       </svg>
     </button>
-    <button id="zoomToggle" title="Activar/Desactivar zoom">
+    <button id="zoomToggle" title="Activar/Desactivar zoom" aria-pressed="false" aria-label="Alternar zoom gráfico">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="width:28px; height:28px;">
         <circle cx="11" cy="11" r="7" stroke="#0a3d66" stroke-width="2" fill="none"/>
         <line x1="16" y1="16" x2="21" y2="21" stroke="#0a3d66" stroke-width="2" />
@@ -320,13 +319,13 @@
   </table>
 
   <div id="pagination">
-    <button id="prevPage" disabled title="Anterior">
+    <button id="prevPage" disabled title="Anterior" aria-label="Página anterior">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <polygon points="15,6 9,12 15,18"></polygon>
       </svg>
     </button>
-    <span id="pageInfo">Página 1 / 1</span>
-    <button id="nextPage" disabled title="Siguiente">
+    <span id="pageInfo" aria-live="polite" aria-atomic="true">Página 1 / 1</span>
+    <button id="nextPage" disabled title="Siguiente" aria-label="Página siguiente">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <polygon points="9,6 15,12 9,18"></polygon>
       </svg>
@@ -334,7 +333,7 @@
   </div>
 
 <script>
-  // Variables para modo oscuro persistente
+  // Modo oscuro persistente
   const bodyEl = document.body;
   const darkToggle = document.getElementById('darkModeToggle');
   const savedTheme = localStorage.getItem('theme');
@@ -554,7 +553,6 @@
         renderTablePage(currentPage);
         updatePaginationButtons();
 
-        // Alerta ejemplo: valor > 80
         if(value > 80) {
           alertActive = true;
           addAlert(value, fullDate);
