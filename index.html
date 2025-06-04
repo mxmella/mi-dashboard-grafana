@@ -9,8 +9,8 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
 
     body {
-      background-color: #121212;
-      color: #e0e0e0;
+      background-color: #0b1e3d; /* Azul oscuro Puerto Coronel */
+      color: #f0f0f0;
       font-family: 'Inter', sans-serif;
       margin: 0;
       padding: 30px 20px;
@@ -23,25 +23,25 @@
       position: fixed;
       top: 15px;
       left: 15px;
-      width: 100px;
+      width: 120px;
       height: auto;
       z-index: 1000;
-      filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+      filter: drop-shadow(0 0 5px rgba(0,0,0,0.7));
     }
     h1 {
       margin-top: 0;
       margin-bottom: 25px;
-      color: #bb86fc;
+      color: #ffc72c; /* Amarillo Puerto Coronel */
       font-weight: 700;
       font-size: 2.5rem;
       text-align: center;
       user-select: none;
-      text-shadow: 0 0 8px rgba(187, 134, 252, 0.7);
+      text-shadow: 0 0 8px rgba(255, 199, 44, 0.7);
     }
     canvas {
-      background-color: #1f1f1f;
+      background-color: #144372; /* Azul medio */
       border-radius: 12px;
-      box-shadow: 0 0 20px rgba(187, 134, 252, 0.25);
+      box-shadow: 0 0 20px rgba(255, 199, 44, 0.25);
       display: block;
       margin: 0 auto 25px auto;
       width: 900px !important;
@@ -52,42 +52,40 @@
       margin-bottom: 30px;
     }
     button {
-      background-color: #bb86fc;
+      background: none;
       border: none;
-      color: #121212;
-      font-weight: 600;
-      padding: 12px 28px;
-      margin: 0 12px;
-      border-radius: 8px;
       cursor: pointer;
-      font-size: 1rem;
-      transition: background-color 0.3s ease, color 0.3s ease;
-      box-shadow: 0 4px 8px rgba(187, 134, 252, 0.4);
-      user-select: none;
+      margin: 0 12px;
+      padding: 8px;
+      filter: drop-shadow(0 0 1.5px rgba(255, 199, 44, 0.9));
+      transition: filter 0.3s ease;
     }
     button:hover:not(:disabled) {
-      background-color: #9a67ea;
-      color: #fff;
-      box-shadow: 0 6px 12px rgba(154, 103, 234, 0.6);
+      filter: drop-shadow(0 0 8px rgba(255, 199, 44, 1));
     }
     button:disabled {
-      background-color: #555;
-      color: #999;
+      filter: none;
       cursor: not-allowed;
-      box-shadow: none;
+      opacity: 0.5;
+    }
+    svg {
+      width: 32px;
+      height: 32px;
+      fill: #ffc72c;
+      user-select: none;
     }
     table {
       width: 900px;
       border-collapse: separate;
       border-spacing: 0 8px;
-      color: #e0e0e0;
+      color: #f0f0f0;
       font-size: 16px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
       border-radius: 12px;
       overflow: hidden;
     }
     thead tr {
-      background-color: #2c2c2c;
+      background-color: #0a1628;
       text-align: left;
       user-select: none;
     }
@@ -97,17 +95,17 @@
     th {
       font-weight: 600;
       font-size: 1rem;
-      color: #bb86fc;
-      border-bottom: 2px solid #4a148c;
+      color: #ffc72c;
+      border-bottom: 2px solid #ffc72c;
     }
     tbody tr {
-      background-color: #1e1e1e;
+      background-color: #10375c;
       transition: background-color 0.2s ease;
       border-radius: 10px;
       user-select: text;
     }
     tbody tr:hover {
-      background-color: #3a2f72;
+      background-color: #215a94;
     }
     tbody tr td {
       border-bottom: none;
@@ -118,34 +116,14 @@
       justify-content: center;
       align-items: center;
       margin-top: 18px;
-      color: #bbb;
+      color: #f0f0f0;
       font-size: 1rem;
       user-select: none;
       gap: 15px;
     }
-    #pagination button {
-      background-color: #7c4dff;
-      color: #fff;
-      padding: 8px 18px;
-      border-radius: 6px;
-      font-weight: 600;
-      box-shadow: 0 3px 6px rgba(124, 77, 255, 0.5);
-      transition: background-color 0.25s ease;
-    }
-    #pagination button:hover:not(:disabled) {
-      background-color: #6200ea;
-      box-shadow: 0 4px 8px rgba(98, 0, 234, 0.6);
-      cursor: pointer;
-    }
-    #pagination button:disabled {
-      background-color: #3f3f3f;
-      color: #666;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
     #pageInfo {
       font-weight: 600;
-      color: #ccc;
+      color: #ffc72c;
     }
   </style>
 </head>
@@ -156,8 +134,19 @@
   <canvas id="myChart" width="900" height="450"></canvas>
 
   <div id="controls">
-    <button id="pauseBtn">Pausar</button>
-    <button id="playBtn" disabled>Reanudar</button>
+    <button id="pauseBtn" title="Pausar">
+      <!-- Icono pausa -->
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <rect x="6" y="5" width="4" height="14"></rect>
+        <rect x="14" y="5" width="4" height="14"></rect>
+      </svg>
+    </button>
+    <button id="playBtn" title="Reanudar" disabled>
+      <!-- Icono play -->
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <polygon points="8,5 19,12 8,19"></polygon>
+      </svg>
+    </button>
   </div>
 
   <table id="dataTable">
@@ -171,9 +160,19 @@
   </table>
 
   <div id="pagination">
-    <button id="prevPage" disabled>Anterior</button>
+    <button id="prevPage" disabled title="Anterior">
+      <!-- Icono izquierda -->
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <polygon points="15,6 9,12 15,18"></polygon>
+      </svg>
+    </button>
     <span id="pageInfo">Página 1 / 1</span>
-    <button id="nextPage" disabled>Siguiente</button>
+    <button id="nextPage" disabled title="Siguiente">
+      <!-- Icono derecha -->
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <polygon points="9,6 15,12 9,18"></polygon>
+      </svg>
+    </button>
   </div>
 
   <script>
@@ -185,8 +184,8 @@
       datasets: [{
         label: 'Medidor CGE (kWh)', 
         data: [],
-        borderColor: '#bb86fc',
-        backgroundColor: 'rgba(187, 134, 252, 0.2)',
+        borderColor: '#ffc72c',
+        backgroundColor: 'rgba(255, 199, 44, 0.3)',
         fill: true,
         tension: 0.3,
         pointRadius: 5,
@@ -204,26 +203,26 @@
         responsive: true,
         plugins: {
           legend: {
-            labels: { color: '#ddd', font: { size: 16, weight: 'bold' } }
+            labels: { color: '#ffd54f', font: { size: 16, weight: 'bold' } }
           },
           tooltip: {
             mode: 'index',
             intersect: false,
-            backgroundColor: '#4a148c',
+            backgroundColor: '#b28800',
             titleFont: { size: 16, weight: 'bold' },
             bodyFont: { size: 14 }
           }
         },
         scales: {
           x: {
-            title: { display: true, text: 'Hora', color: '#ddd', font: { size: 18, weight: 'bold' } },
-            ticks: { color: '#ccc', maxRotation: 45, minRotation: 30 },
-            grid: { color: 'rgba(255,255,255,0.15)' }
+            title: { display: true, text: 'Hora', color: '#ffd54f', font: { size: 18, weight: 'bold' } },
+            ticks: { color: '#ffecb3', maxRotation: 45, minRotation: 30 },
+            grid: { color: 'rgba(255, 235, 59, 0.15)' }
           },
           y: {
-            title: { display: true, text: 'Valor (kWh)', color: '#ddd', font: { size: 18, weight: 'bold' } },
-            ticks: { color: '#ccc' },
-            grid: { color: 'rgba(255,255,255,0.15)' }
+            title: { display: true, text: 'Valor (kWh)', color: '#ffd54f', font: { size: 18, weight: 'bold' } },
+            ticks: { color: '#ffecb3' },
+            grid: { color: 'rgba(255, 235, 59, 0.15)' }
           }
         },
         interaction: {
