@@ -12,16 +12,17 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
 
+    /* Variables CSS para temas claro/oscuro */
     :root {
       --color-bg-light: #fff;
       --color-text-light: #333;
-      --color-bg-dark: #2f2f2f;
-      --color-text-dark: #dcdcdc;
+      --color-bg-dark: #0b1e3d;
+      --color-text-dark: #f0f0f0;
       --color-primary: #0a3d66;
       --color-primary-light: #0a72c1;
       --color-accent: #ffc72c;
       --color-table-header-bg-light: var(--color-primary);
-      --color-table-header-bg-dark: #444444;
+      --color-table-header-bg-dark: #144372;
     }
 
     body {
@@ -77,34 +78,12 @@
       transition: background-color 0.4s ease;
     }
     body.dark-mode canvas {
-      background-color: #3b3b3b;
+      background-color: #144372;
       box-shadow: 0 0 25px rgba(255, 199, 44, 0.4);
     }
     #controls {
       text-align: center;
-      margin-bottom: 20px;
-    }
-    #extraControls {
-      text-align: center;
-      margin-bottom: 20px;
-      width: 900px;
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    input[type="text"], input[type="date"] {
-      padding: 6px 12px;
-      border-radius: 6px;
-      border: 2px solid var(--color-primary);
-      font-size: 1rem;
-      outline: none;
-      transition: border-color 0.3s ease;
-      flex-grow: 1;
-      max-width: 200px;
-    }
-    input[type="text"]:focus, input[type="date"]:focus {
-      border-color: var(--color-primary-light);
+      margin-bottom: 30px;
     }
     button {
       background: none;
@@ -115,8 +94,6 @@
       padding: 8px;
       border-radius: 6px;
       transition: background-color 0.3s ease, color 0.3s ease;
-      vertical-align: middle;
-      min-width: 48px;
     }
     button:hover:not(:disabled) {
       background-color: var(--color-primary);
@@ -134,14 +111,13 @@
     }
     body.dark-mode button:hover:not(:disabled) {
       background-color: var(--color-accent);
-      color: var(--color-bg-dark);
+      color: #0b1e3d;
     }
     svg {
       width: 32px;
       height: 32px;
       fill: currentColor;
       user-select: none;
-      vertical-align: middle;
     }
     table {
       width: 900px;
@@ -156,7 +132,7 @@
       transition: background-color 0.4s ease, color 0.4s ease;
     }
     body.dark-mode table {
-      background: #3b3b3b;
+      background: #10375c;
       color: var(--color-text-dark);
       box-shadow: 0 0 25px rgba(255, 199, 44, 0.4);
     }
@@ -180,13 +156,13 @@
       user-select: text;
     }
     body.dark-mode tbody tr {
-      background-color: #545454;
+      background-color: #215a94;
     }
     tbody tr:hover {
       background-color: #c7dbf8;
     }
     body.dark-mode tbody tr:hover {
-      background-color: #6f6f6f;
+      background-color: #2a73c1;
     }
     tbody tr td {
       border-bottom: none;
@@ -215,6 +191,7 @@
       color: var(--color-accent);
     }
 
+    /* Indicador de conexión */
     #connectionStatus {
       font-weight: 700;
       font-size: 1rem;
@@ -227,6 +204,7 @@
       color: var(--color-accent);
     }
 
+    /* Toggle modo oscuro */
     #darkModeToggle {
       position: fixed;
       top: 15px;
@@ -248,7 +226,7 @@
     }
     body.dark-mode #darkModeToggle {
       background: var(--color-accent);
-      color: var(--color-bg-dark);
+      color: #0b1e3d;
       box-shadow: 0 0 15px rgba(255, 199, 44, 0.7);
     }
     body.dark-mode #darkModeToggle:hover {
@@ -274,7 +252,7 @@
       background: #0a72c1;
     }
     body.dark-mode #alertHistory {
-      background: #3b3b3b; color: #ff9999; border-color: #ff4c4c;
+      background: #10375c; color: #ff9999; border-color: #ff4c4c;
       box-shadow: 0 0 25px rgba(255, 199, 44, 0.4);
     }
     body.dark-mode #toggleAlertsBtn {
@@ -298,13 +276,6 @@
   <div id="alertContainer">⚠️ Alerta: Valor alto detectado!</div>
   <button id="toggleAlertsBtn">Mostrar Historial de Alertas</button>
   <div id="alertHistory"></div>
-
-  <div id="extraControls">
-    <input type="text" id="searchInput" placeholder="Buscar en tabla (fecha o valor)" title="Filtrar tabla en tiempo real" />
-    <label for="dateFrom">Desde: </label><input type="date" id="dateFrom" />
-    <label for="dateTo">Hasta: </label><input type="date" id="dateTo" />
-    <button id="exportCsvBtn" title="Exportar tabla a CSV">Exportar CSV</button>
-  </div>
 
   <canvas id="myChart" width="900" height="450"></canvas>
 
@@ -363,7 +334,7 @@
   </div>
 
 <script>
-  // Modo oscuro persistente
+  // Variables para modo oscuro persistente
   const bodyEl = document.body;
   const darkToggle = document.getElementById('darkModeToggle');
   const savedTheme = localStorage.getItem('theme');
@@ -371,6 +342,7 @@
     bodyEl.classList.add('dark-mode');
     darkToggle.textContent = 'Modo claro';
   }
+
   darkToggle.addEventListener('click', () => {
     bodyEl.classList.toggle('dark-mode');
     if(bodyEl.classList.contains('dark-mode')) {
@@ -442,8 +414,7 @@
         axis: 'x',
         intersect: false
       }
-    },
-    plugins: [Chart.Zoom]
+    }
   };
 
   const myChart = new Chart(ctx, config);
@@ -457,10 +428,6 @@
   const backBtn = document.getElementById('backBtn');
   const forwardBtn = document.getElementById('forwardBtn');
   const zoomToggle = document.getElementById('zoomToggle');
-  const searchInput = document.getElementById('searchInput');
-  const exportCsvBtn = document.getElementById('exportCsvBtn');
-  const dateFrom = document.getElementById('dateFrom');
-  const dateTo = document.getElementById('dateTo');
 
   // Alertas
   const alertContainer = document.getElementById('alertContainer');
@@ -500,7 +467,6 @@
     playBtn.disabled = false;
     backBtn.style.display = 'inline-block';
     forwardBtn.style.display = 'inline-block';
-    zoomToggle.disabled = true;
     viewIndex = data.labels.length - 1;
     updateGraphView();
   });
@@ -511,7 +477,6 @@
     playBtn.disabled = true;
     backBtn.style.display = 'none';
     forwardBtn.style.display = 'none';
-    zoomToggle.disabled = false;
     updateGraphView();
   });
 
@@ -519,7 +484,6 @@
     if(viewIndex > 19) {
       viewIndex--;
       updateGraphView();
-      updateBackForwardButtons();
     }
   });
 
@@ -527,7 +491,6 @@
     if(viewIndex < data.labels.length - 1) {
       viewIndex++;
       updateGraphView();
-      updateBackForwardButtons();
     }
   });
 
@@ -543,11 +506,6 @@
     }
   });
 
-  function updateBackForwardButtons() {
-    backBtn.disabled = viewIndex <= 19;
-    forwardBtn.disabled = viewIndex >= data.labels.length - 1;
-  }
-
   function updateGraphView(){
     if(!paused){
       const lastLabels = data.labels.slice(-20);
@@ -561,7 +519,6 @@
       myChart.data.datasets[0].data = data.datasets[0].data.slice(start, end);
     }
     myChart.update();
-    updateBackForwardButtons();
   }
 
   client.on('connect', () => {
@@ -594,16 +551,27 @@
         allData.push({datetime: fullDate, value: value});
         if(allData.length > 1000) allData.shift();
 
-        applyFiltersAndRender();
+        renderTablePage(currentPage);
+        updatePaginationButtons();
 
-        // Alertas
-        const threshold = 80;
-        if(value > threshold) {
+        // Alerta ejemplo: valor > 80
+        if(value > 80) {
           alertActive = true;
           addAlert(value, fullDate);
         } else {
           alertActive = false;
           alertContainer.style.display = 'none';
+        }
+
+        if (!paused) {
+          data.labels.push(timeLabel);
+          data.datasets[0].data.push(value);
+
+          if (data.labels.length > 20) {
+            data.labels.shift();
+            data.datasets[0].data.shift();
+          }
+          myChart.update();
         }
       }
     }
@@ -616,56 +584,11 @@
   const rowsPerPage = 10;
   let currentPage = 1;
 
-  let filteredData = [];
-
-  function applyFiltersAndRender() {
-    let tempData = [...allData];
-
-    const searchTerm = searchInput.value.trim().toLowerCase();
-    if(searchTerm !== '') {
-      tempData = tempData.filter(item => 
-        item.datetime.toLowerCase().includes(searchTerm) || 
-        item.value.toString().includes(searchTerm)
-      );
-    }
-
-    if(dateFrom.value) {
-      const fromDate = new Date(dateFrom.value);
-      tempData = tempData.filter(item => new Date(item.datetime) >= fromDate);
-    }
-
-    if(dateTo.value) {
-      const toDate = new Date(dateTo.value);
-      toDate.setHours(23,59,59,999);
-      tempData = tempData.filter(item => new Date(item.datetime) <= toDate);
-    }
-
-    filteredData = tempData;
-    currentPage = 1;
-
-    renderTablePage(currentPage);
-    updatePaginationButtons();
-
-    if(!paused){
-      updateChartWithFilteredData();
-    }
-  }
-
-  function updateChartWithFilteredData() {
-    const len = filteredData.length;
-    const lastItems = filteredData.slice(Math.max(0, len - 20), len);
-
-    data.labels = lastItems.map(item => new Date(item.datetime).toLocaleTimeString());
-    data.datasets[0].data = lastItems.map(item => item.value);
-
-    myChart.update();
-  }
-
   function renderTablePage(page) {
     tableBody.innerHTML = '';
     const start = (page - 1) * rowsPerPage;
     const end = start + rowsPerPage;
-    const pageData = filteredData.slice(start, end);
+    const pageData = allData.slice(start, end);
     for (const row of pageData) {
       const tr = document.createElement('tr');
       const tdDate = document.createElement('td');
@@ -676,12 +599,12 @@
       tr.appendChild(tdValue);
       tableBody.appendChild(tr);
     }
-    const totalPages = Math.min(1000, Math.max(1, Math.ceil(filteredData.length / rowsPerPage)));
+    const totalPages = Math.min(1000, Math.max(1, Math.ceil(allData.length / rowsPerPage)));
     pageInfo.textContent = `Página ${currentPage} / ${totalPages}`;
   }
 
   function updatePaginationButtons() {
-    const totalPages = Math.min(1000, Math.max(1, Math.ceil(filteredData.length / rowsPerPage)));
+    const totalPages = Math.min(1000, Math.max(1, Math.ceil(allData.length / rowsPerPage)));
     prevPageBtn.disabled = currentPage === 1;
     nextPageBtn.disabled = currentPage === totalPages;
   }
@@ -695,45 +618,12 @@
   });
 
   nextPageBtn.addEventListener('click', () => {
-    if (currentPage * rowsPerPage < filteredData.length) {
+    if (currentPage * rowsPerPage < allData.length) {
       currentPage++;
       renderTablePage(currentPage);
       updatePaginationButtons();
     }
   });
-
-  searchInput.addEventListener('input', () => {
-    applyFiltersAndRender();
-  });
-
-  dateFrom.addEventListener('change', () => {
-    applyFiltersAndRender();
-  });
-
-  dateTo.addEventListener('change', () => {
-    applyFiltersAndRender();
-  });
-
-  exportCsvBtn.addEventListener('click', () => {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Fecha y Hora,Valor Medidor CGE\n";
-    filteredData.forEach(row => {
-      csvContent += `"${row.datetime}","${row.value.toFixed(2)}"\n`;
-    });
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "medidor_cge_datos.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  });
-
-  // Inicializar filtros y mostrar todo inicialmente
-  filteredData = [...allData];
-  applyFiltersAndRender();
 </script>
 </body>
 </html>
-
