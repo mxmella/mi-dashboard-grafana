@@ -15,8 +15,8 @@
     :root {
       --color-bg-light: #fff;
       --color-text-light: #333;
-      --color-bg-dark: #2f2f2f; /* gris oscuro neutro */
-      --color-text-dark: #dcdcdc; /* gris claro */
+      --color-bg-dark: #2f2f2f;
+      --color-text-dark: #dcdcdc;
       --color-primary: #0a3d66;
       --color-primary-light: #0a72c1;
       --color-accent: #ffc72c;
@@ -82,7 +82,29 @@
     }
     #controls {
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 20px;
+    }
+    #extraControls {
+      text-align: center;
+      margin-bottom: 20px;
+      width: 900px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    input[type="text"], input[type="date"] {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 2px solid var(--color-primary);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.3s ease;
+      flex-grow: 1;
+      max-width: 200px;
+    }
+    input[type="text"]:focus, input[type="date"]:focus {
+      border-color: var(--color-primary-light);
     }
     button {
       background: none;
@@ -94,6 +116,7 @@
       border-radius: 6px;
       transition: background-color 0.3s ease, color 0.3s ease;
       vertical-align: middle;
+      min-width: 48px;
     }
     button:hover:not(:disabled) {
       background-color: var(--color-primary);
@@ -218,6 +241,7 @@
       box-shadow: 0 0 10px rgba(10, 61, 102, 0.4);
       transition: background-color 0.3s ease;
       user-select: none;
+      z-index: 1100;
     }
     #darkModeToggle:hover {
       background-color: var(--color-primary-light);
@@ -230,6 +254,36 @@
     body.dark-mode #darkModeToggle:hover {
       background-color: #f4c320;
     }
+
+    /* Alertas */
+    #alertContainer {
+      display:none; max-width:900px; margin: 0 auto 20px; padding:10px; border-radius:6px;
+      background:#ff4c4c; color:#fff; font-weight:bold; text-align:center; font-size:1.2rem;
+      user-select:none; box-shadow: 0 0 15px rgba(255,0,0,0.5);
+    }
+    #alertHistory {
+      display:none; max-width:900px; margin: 0 auto 30px; background:#faf0f0; border:1px solid #ff4c4c;
+      border-radius:6px; padding:10px; max-height: 150px; overflow-y: auto;
+      font-family: monospace; font-size: 0.9rem; color:#900;
+    }
+    #toggleAlertsBtn {
+      margin-bottom:15px; display:none; cursor:pointer; background:#0a3d66; color:#fff;
+      padding:8px 14px; border:none; border-radius:6px; font-weight:600; user-select:none;
+    }
+    #toggleAlertsBtn:hover {
+      background: #0a72c1;
+    }
+    body.dark-mode #alertHistory {
+      background: #3b3b3b; color: #ff9999; border-color: #ff4c4c;
+      box-shadow: 0 0 25px rgba(255, 199, 44, 0.4);
+    }
+    body.dark-mode #toggleAlertsBtn {
+      background: var(--color-accent); color: var(--color-bg-dark);
+      box-shadow: 0 0 15px rgba(255, 199, 44, 0.7);
+    }
+    body.dark-mode #toggleAlertsBtn:hover {
+      background-color: #f4c320;
+    }
   </style>
 </head>
 <body>
@@ -239,6 +293,18 @@
   <h1>Medidor de energía CGE</h1>
 
   <div id="connectionStatus">Estado: <span id="connText">Desconectado</span></div>
+
+  <!-- Alertas -->
+  <div id="alertContainer">⚠️ Alerta: Valor alto detectado!</div>
+  <button id="toggleAlertsBtn">Mostrar Historial de Alertas</button>
+  <div id="alertHistory"></div>
+
+  <div id="extraControls">
+    <input type="text" id="searchInput" placeholder="Buscar en tabla (fecha o valor)" title="Filtrar tabla en tiempo real" />
+    <label for="dateFrom">Desde: </label><input type="date" id="dateFrom" />
+    <label for="dateTo">Hasta: </label><input type="date" id="dateTo" />
+    <button id="exportCsvBtn" title="Exportar tabla a CSV">Exportar CSV</button>
+  </div>
 
   <canvas id="myChart" width="900" height="450"></canvas>
 
@@ -272,11 +338,11 @@
     </button>
   </div>
 
-  <table id="dataTable">
+  <table id="dataTable" tabindex="0" aria-label="Tabla de datos de medidor CGE">
     <thead>
       <tr>
-        <th>Fecha y Hora</th>
-        <th>Valor Medidor CGE</th>
+        <th scope="col" data-sort="datetime" style="cursor:pointer;">Fecha y Hora &#x25B2;&#x25BC;</th>
+        <th scope="col" data-sort="value" style="cursor:pointer;">Valor Medidor CGE</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -296,267 +362,378 @@
     </button>
   </div>
 
-  <script>
-    // Modo oscuro persistente
-    const bodyEl = document.body;
-    const darkToggle = document.getElementById('darkModeToggle');
-    const savedTheme = localStorage.getItem('theme');
-    if(savedTheme === 'dark') {
-      bodyEl.classList.add('dark-mode');
+<script>
+  // Modo oscuro persistente
+  const bodyEl = document.body;
+  const darkToggle = document.getElementById('darkModeToggle');
+  const savedTheme = localStorage.getItem('theme');
+  if(savedTheme === 'dark') {
+    bodyEl.classList.add('dark-mode');
+    darkToggle.textContent = 'Modo claro';
+  }
+  darkToggle.addEventListener('click', () => {
+    bodyEl.classList.toggle('dark-mode');
+    if(bodyEl.classList.contains('dark-mode')) {
       darkToggle.textContent = 'Modo claro';
+      localStorage.setItem('theme', 'dark');
+    } else {
+      darkToggle.textContent = 'Modo oscuro';
+      localStorage.setItem('theme', 'light');
     }
-    darkToggle.addEventListener('click', () => {
-      bodyEl.classList.toggle('dark-mode');
-      if(bodyEl.classList.contains('dark-mode')) {
-        darkToggle.textContent = 'Modo claro';
-        localStorage.setItem('theme', 'dark');
-      } else {
-        darkToggle.textContent = 'Modo oscuro';
-        localStorage.setItem('theme', 'light');
-      }
-    });
+  });
 
-    // MQTT y Chart.js con Zoom plugin
-    const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
-    const ctx = document.getElementById('myChart').getContext('2d');
-    const connText = document.getElementById('connText');
+  // MQTT y Chart.js con Zoom plugin
+  const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
+  const ctx = document.getElementById('myChart').getContext('2d');
+  const connText = document.getElementById('connText');
 
-    const data = {
-      labels: [], 
-      datasets: [{
-        label: 'Medidor CGE (I Max)', 
-        data: [],
-        borderColor: '#0a72c1',
-        backgroundColor: 'rgba(10, 114, 193, 0.3)',
-        fill: true,
-        tension: 0.3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderWidth: 3,
-        hoverBorderWidth: 4
-      }]
-    };
+  const data = {
+    labels: [], 
+    datasets: [{
+      label: 'Medidor CGE (I Max)', 
+      data: [],
+      borderColor: '#0a72c1',
+      backgroundColor: 'rgba(10, 114, 193, 0.3)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      borderWidth: 3,
+      hoverBorderWidth: 4
+    }]
+  };
 
-    const config = {
-      type: 'line',
-      data: data,
-      options: {
-        animation: false,
-        responsive: true,
-        plugins: {
-          legend: {
-            labels: { color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', font: { size: 16, weight: 'bold' } }
-          },
-          tooltip: {
-            mode: 'index',
-            intersect: false,
-            backgroundColor: '#0a72c1',
-            titleFont: { size: 16, weight: 'bold' },
-            bodyFont: { size: 14 }
-          },
-          zoom: {
-            pan: { enabled: false, mode: 'x' },
-            zoom: { enabled: false, mode: 'x', wheel: { enabled: true }, pinch: { enabled: true } }
-          }
+  const config = {
+    type: 'line',
+    data: data,
+    options: {
+      animation: false,
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', font: { size: 16, weight: 'bold' } }
         },
-        scales: {
-          x: {
-            title: { display: true, text: 'Tiempo', color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', font: { size: 18, weight: 'bold' } },
-            ticks: { color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', maxRotation: 45, minRotation: 30 },
-            grid: { color: 'rgba(10, 61, 102, 0.15)' }
-          },
-          y: {
-            title: { display: true, text: 'I Max', color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', font: { size: 18, weight: 'bold' } },
-            ticks: { color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66' },
-            grid: { color: 'rgba(10, 61, 102, 0.15)' }
-          }
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: '#0a72c1',
+          titleFont: { size: 16, weight: 'bold' },
+          bodyFont: { size: 14 }
         },
-        interaction: {
-          mode: 'nearest',
-          axis: 'x',
-          intersect: false
+        zoom: {
+          pan: { enabled: false, mode: 'x' },
+          zoom: { enabled: false, mode: 'x', wheel: { enabled: true }, pinch: { enabled: true } }
         }
       },
-      plugins: [Chart.Zoom]
-    };
-
-    const myChart = new Chart(ctx, config);
-
-    let paused = false;
-    let allData = [];
-    let viewIndex = -1;
-
-    const pauseBtn = document.getElementById('pauseBtn');
-    const playBtn = document.getElementById('playBtn');
-    const backBtn = document.getElementById('backBtn');
-    const forwardBtn = document.getElementById('forwardBtn');
-    const zoomToggle = document.getElementById('zoomToggle');
-
-    pauseBtn.addEventListener('click', () => {
-      paused = true;
-      pauseBtn.disabled = true;
-      playBtn.disabled = false;
-      backBtn.style.display = 'inline-block';
-      forwardBtn.style.display = 'inline-block';
-      zoomToggle.disabled = true; // bloquear zoom cuando pausado
-      viewIndex = data.labels.length - 1;
-      updateGraphView();
-    });
-
-    playBtn.addEventListener('click', () => {
-      paused = false;
-      pauseBtn.disabled = false;
-      playBtn.disabled = true;
-      backBtn.style.display = 'none';
-      forwardBtn.style.display = 'none';
-      zoomToggle.disabled = false;
-      updateGraphView();
-    });
-
-    backBtn.addEventListener('click', () => {
-      if(viewIndex > 19) {
-        viewIndex--;
-        updateGraphView();
-        updateBackForwardButtons();
+      scales: {
+        x: {
+          title: { display: true, text: 'Tiempo', color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', font: { size: 18, weight: 'bold' } },
+          ticks: { color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', maxRotation: 45, minRotation: 30 },
+          grid: { color: 'rgba(10, 61, 102, 0.15)' }
+        },
+        y: {
+          title: { display: true, text: 'I Max', color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', font: { size: 18, weight: 'bold' } },
+          ticks: { color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66' },
+          grid: { color: 'rgba(10, 61, 102, 0.15)' }
+        }
+      },
+      interaction: {
+        mode: 'nearest',
+        axis: 'x',
+        intersect: false
       }
-    });
+    },
+    plugins: [Chart.Zoom]
+  };
 
-    forwardBtn.addEventListener('click', () => {
-      if(viewIndex < data.labels.length - 1) {
-        viewIndex++;
-        updateGraphView();
-        updateBackForwardButtons();
-      }
-    });
+  const myChart = new Chart(ctx, config);
 
-    zoomToggle.addEventListener('click', () => {
-      const zoomPlugin = myChart.getPlugin('zoom');
-      const enabled = zoomPlugin._enabled || false;
-      if(enabled) {
-        zoomPlugin.disable();
-        zoomToggle.style.backgroundColor = 'transparent';
-      } else {
-        zoomPlugin.enable();
-        zoomToggle.style.backgroundColor = 'var(--color-primary)';
-      }
-    });
+  let paused = false;
+  let allData = [];
+  let viewIndex = -1;
 
-    function updateBackForwardButtons() {
-      backBtn.disabled = viewIndex <= 19;
-      forwardBtn.disabled = viewIndex >= data.labels.length - 1;
+  const pauseBtn = document.getElementById('pauseBtn');
+  const playBtn = document.getElementById('playBtn');
+  const backBtn = document.getElementById('backBtn');
+  const forwardBtn = document.getElementById('forwardBtn');
+  const zoomToggle = document.getElementById('zoomToggle');
+  const searchInput = document.getElementById('searchInput');
+  const exportCsvBtn = document.getElementById('exportCsvBtn');
+  const dateFrom = document.getElementById('dateFrom');
+  const dateTo = document.getElementById('dateTo');
+
+  // Alertas
+  const alertContainer = document.getElementById('alertContainer');
+  const alertHistoryDiv = document.getElementById('alertHistory');
+  const toggleAlertsBtn = document.getElementById('toggleAlertsBtn');
+  let alertActive = false;
+  let alertHistory = [];
+
+  toggleAlertsBtn.addEventListener('click', () => {
+    if(alertHistoryDiv.style.display === 'none') {
+      alertHistoryDiv.style.display = 'block';
+      toggleAlertsBtn.textContent = 'Ocultar Historial de Alertas';
+    } else {
+      alertHistoryDiv.style.display = 'none';
+      toggleAlertsBtn.textContent = 'Mostrar Historial de Alertas';
     }
+  });
 
-    function updateGraphView(){
-      if(!paused){
-        const lastLabels = data.labels.slice(-20);
-        const lastData = data.datasets[0].data.slice(-20);
-        myChart.data.labels = lastLabels;
-        myChart.data.datasets[0].data = lastData;
-      } else {
-        const start = Math.max(0, viewIndex - 19);
-        const end = viewIndex + 1;
-        myChart.data.labels = data.labels.slice(start, end);
-        myChart.data.datasets[0].data = data.datasets[0].data.slice(start, end);
-      }
-      myChart.update();
+  function addAlert(value, datetime) {
+    const alertText = `Alerta en ${datetime}: valor = ${value.toFixed(2)}`;
+    alertHistory.push(alertText);
+    alertHistoryDiv.innerHTML = alertHistory.map(a => `<div>${a}</div>`).join('');
+    toggleAlertsBtn.style.display = 'inline-block';
+
+    alertContainer.style.display = 'block';
+    alertContainer.textContent = `⚠️ Alerta: Valor alto detectado! Valor actual: ${value.toFixed(2)}`;
+
+    setTimeout(() => {
+      if(alertActive) return;
+      alertContainer.style.display = 'none';
+    }, 5000);
+  }
+
+  pauseBtn.addEventListener('click', () => {
+    paused = true;
+    pauseBtn.disabled = true;
+    playBtn.disabled = false;
+    backBtn.style.display = 'inline-block';
+    forwardBtn.style.display = 'inline-block';
+    zoomToggle.disabled = true;
+    viewIndex = data.labels.length - 1;
+    updateGraphView();
+  });
+
+  playBtn.addEventListener('click', () => {
+    paused = false;
+    pauseBtn.disabled = false;
+    playBtn.disabled = true;
+    backBtn.style.display = 'none';
+    forwardBtn.style.display = 'none';
+    zoomToggle.disabled = false;
+    updateGraphView();
+  });
+
+  backBtn.addEventListener('click', () => {
+    if(viewIndex > 19) {
+      viewIndex--;
+      updateGraphView();
       updateBackForwardButtons();
     }
+  });
 
-    client.on('connect', () => {
-      console.log('Conectado al broker MQTT');
-      connText.textContent = 'Conectado';
-      client.subscribe('MEDIDOR_CGE');
-    });
+  forwardBtn.addEventListener('click', () => {
+    if(viewIndex < data.labels.length - 1) {
+      viewIndex++;
+      updateGraphView();
+      updateBackForwardButtons();
+    }
+  });
 
-    client.on('reconnect', () => {
-      connText.textContent = 'Reconectando...';
-    });
+  zoomToggle.addEventListener('click', () => {
+    const zoomPlugin = myChart.getPlugin('zoom');
+    const enabled = zoomPlugin._enabled || false;
+    if(enabled) {
+      zoomPlugin.disable();
+      zoomToggle.style.backgroundColor = 'transparent';
+    } else {
+      zoomPlugin.enable();
+      zoomToggle.style.backgroundColor = 'var(--color-primary)';
+    }
+  });
 
-    client.on('close', () => {
-      connText.textContent = 'Desconectado';
-    });
+  function updateBackForwardButtons() {
+    backBtn.disabled = viewIndex <= 19;
+    forwardBtn.disabled = viewIndex >= data.labels.length - 1;
+  }
 
-    client.on('error', (err) => {
-      console.error('Error MQTT:', err);
-      connText.textContent = 'Error de conexión';
-    });
+  function updateGraphView(){
+    if(!paused){
+      const lastLabels = data.labels.slice(-20);
+      const lastData = data.datasets[0].data.slice(-20);
+      myChart.data.labels = lastLabels;
+      myChart.data.datasets[0].data = lastData;
+    } else {
+      const start = Math.max(0, viewIndex - 19);
+      const end = viewIndex + 1;
+      myChart.data.labels = data.labels.slice(start, end);
+      myChart.data.datasets[0].data = data.datasets[0].data.slice(start, end);
+    }
+    myChart.update();
+    updateBackForwardButtons();
+  }
 
-    client.on('message', (topic, message) => {
-      if (topic === 'MEDIDOR_CGE') {
-        const value = parseFloat(message.toString());
-        if (!isNaN(value)) {
-          const now = new Date();
-          const timeLabel = now.toLocaleTimeString();
-          const fullDate = now.toLocaleString();
+  client.on('connect', () => {
+    console.log('Conectado al broker MQTT');
+    connText.textContent = 'Conectado';
+    client.subscribe('MEDIDOR_CGE');
+  });
 
-          allData.push({datetime: fullDate, value: value});
-          if(allData.length > 1000) allData.shift();
+  client.on('reconnect', () => {
+    connText.textContent = 'Reconectando...';
+  });
 
-          renderTablePage(currentPage);
-          updatePaginationButtons();
+  client.on('close', () => {
+    connText.textContent = 'Desconectado';
+  });
 
-          if (!paused) {
-            data.labels.push(timeLabel);
-            data.datasets[0].data.push(value);
+  client.on('error', (err) => {
+    console.error('Error MQTT:', err);
+    connText.textContent = 'Error de conexión';
+  });
 
-            if (data.labels.length > 20) {
-              data.labels.shift();
-              data.datasets[0].data.shift();
-            }
-            myChart.update();
-          }
+  client.on('message', (topic, message) => {
+    if (topic === 'MEDIDOR_CGE') {
+      const value = parseFloat(message.toString());
+      if (!isNaN(value)) {
+        const now = new Date();
+        const timeLabel = now.toLocaleTimeString();
+        const fullDate = now.toLocaleString();
+
+        allData.push({datetime: fullDate, value: value});
+        if(allData.length > 1000) allData.shift();
+
+        applyFiltersAndRender();
+
+        // Alertas
+        const threshold = 80;
+        if(value > threshold) {
+          alertActive = true;
+          addAlert(value, fullDate);
+        } else {
+          alertActive = false;
+          alertContainer.style.display = 'none';
         }
       }
-    });
+    }
+  });
 
-    const tableBody = document.querySelector('#dataTable tbody');
-    const prevPageBtn = document.getElementById('prevPage');
-    const nextPageBtn = document.getElementById('nextPage');
-    const pageInfo = document.getElementById('pageInfo');
-    const rowsPerPage = 10;
-    let currentPage = 1;
+  const tableBody = document.querySelector('#dataTable tbody');
+  const prevPageBtn = document.getElementById('prevPage');
+  const nextPageBtn = document.getElementById('nextPage');
+  const pageInfo = document.getElementById('pageInfo');
+  const rowsPerPage = 10;
+  let currentPage = 1;
 
-    function renderTablePage(page) {
-      tableBody.innerHTML = '';
-      const start = (page - 1) * rowsPerPage;
-      const end = start + rowsPerPage;
-      const pageData = allData.slice(start, end);
-      for (const row of pageData) {
-        const tr = document.createElement('tr');
-        const tdDate = document.createElement('td');
-        const tdValue = document.createElement('td');
-        tdDate.textContent = row.datetime;
-        tdValue.textContent = row.value.toFixed(2);
-        tr.appendChild(tdDate);
-        tr.appendChild(tdValue);
-        tableBody.appendChild(tr);
-      }
-      const totalPages = Math.min(1000, Math.max(1, Math.ceil(allData.length / rowsPerPage)));
-      pageInfo.textContent = `Página ${currentPage} / ${totalPages}`;
+  let filteredData = [];
+
+  function applyFiltersAndRender() {
+    let tempData = [...allData];
+
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    if(searchTerm !== '') {
+      tempData = tempData.filter(item => 
+        item.datetime.toLowerCase().includes(searchTerm) || 
+        item.value.toString().includes(searchTerm)
+      );
     }
 
-    function updatePaginationButtons() {
-      const totalPages = Math.min(1000, Math.max(1, Math.ceil(allData.length / rowsPerPage)));
-      prevPageBtn.disabled = currentPage === 1;
-      nextPageBtn.disabled = currentPage === totalPages;
+    if(dateFrom.value) {
+      const fromDate = new Date(dateFrom.value);
+      tempData = tempData.filter(item => new Date(item.datetime) >= fromDate);
     }
 
-    prevPageBtn.addEventListener('click', () => {
-      if (currentPage > 1) {
-        currentPage--;
-        renderTablePage(currentPage);
-        updatePaginationButtons();
-      }
+    if(dateTo.value) {
+      const toDate = new Date(dateTo.value);
+      toDate.setHours(23,59,59,999);
+      tempData = tempData.filter(item => new Date(item.datetime) <= toDate);
+    }
+
+    filteredData = tempData;
+    currentPage = 1;
+
+    renderTablePage(currentPage);
+    updatePaginationButtons();
+
+    if(!paused){
+      updateChartWithFilteredData();
+    }
+  }
+
+  function updateChartWithFilteredData() {
+    const len = filteredData.length;
+    const lastItems = filteredData.slice(Math.max(0, len - 20), len);
+
+    data.labels = lastItems.map(item => new Date(item.datetime).toLocaleTimeString());
+    data.datasets[0].data = lastItems.map(item => item.value);
+
+    myChart.update();
+  }
+
+  function renderTablePage(page) {
+    tableBody.innerHTML = '';
+    const start = (page - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const pageData = filteredData.slice(start, end);
+    for (const row of pageData) {
+      const tr = document.createElement('tr');
+      const tdDate = document.createElement('td');
+      const tdValue = document.createElement('td');
+      tdDate.textContent = row.datetime;
+      tdValue.textContent = row.value.toFixed(2);
+      tr.appendChild(tdDate);
+      tr.appendChild(tdValue);
+      tableBody.appendChild(tr);
+    }
+    const totalPages = Math.min(1000, Math.max(1, Math.ceil(filteredData.length / rowsPerPage)));
+    pageInfo.textContent = `Página ${currentPage} / ${totalPages}`;
+  }
+
+  function updatePaginationButtons() {
+    const totalPages = Math.min(1000, Math.max(1, Math.ceil(filteredData.length / rowsPerPage)));
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = currentPage === totalPages;
+  }
+
+  prevPageBtn.addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage--;
+      renderTablePage(currentPage);
+      updatePaginationButtons();
+    }
+  });
+
+  nextPageBtn.addEventListener('click', () => {
+    if (currentPage * rowsPerPage < filteredData.length) {
+      currentPage++;
+      renderTablePage(currentPage);
+      updatePaginationButtons();
+    }
+  });
+
+  searchInput.addEventListener('input', () => {
+    applyFiltersAndRender();
+  });
+
+  dateFrom.addEventListener('change', () => {
+    applyFiltersAndRender();
+  });
+
+  dateTo.addEventListener('change', () => {
+    applyFiltersAndRender();
+  });
+
+  exportCsvBtn.addEventListener('click', () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Fecha y Hora,Valor Medidor CGE\n";
+    filteredData.forEach(row => {
+      csvContent += `"${row.datetime}","${row.value.toFixed(2)}"\n`;
     });
 
-    nextPageBtn.addEventListener('click', () => {
-      if (currentPage * rowsPerPage < allData.length) {
-        currentPage++;
-        renderTablePage(currentPage);
-        updatePaginationButtons();
-      }
-    });
-  </script>
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "medidor_cge_datos.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+
+  // Inicializar filtros y mostrar todo inicialmente
+  filteredData = [...allData];
+  applyFiltersAndRender();
+</script>
 </body>
 </html>
 
