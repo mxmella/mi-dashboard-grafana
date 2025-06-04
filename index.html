@@ -143,6 +143,16 @@
         <polygon points="8,5 19,12 8,19"></polygon>
       </svg>
     </button>
+    <button id="backBtn" title="Retroceder" style="display:none;">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <polygon points="15,6 9,12 15,18"></polygon>
+      </svg>
+    </button>
+    <button id="forwardBtn" title="Adelantar" style="display:none;">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <polygon points="9,6 15,12 9,18"></polygon>
+      </svg>
+    </button>
   </div>
 
   <table id="dataTable">
@@ -231,21 +241,60 @@
 
     let paused = false;
     let allData = [];
+    let viewIndex = -1;
 
     const pauseBtn = document.getElementById('pauseBtn');
     const playBtn = document.getElementById('playBtn');
+    const backBtn = document.getElementById('backBtn');
+    const forwardBtn = document.getElementById('forwardBtn');
 
     pauseBtn.addEventListener('click', () => {
       paused = true;
       pauseBtn.disabled = true;
       playBtn.disabled = false;
+      backBtn.style.display = 'inline-block';
+      forwardBtn.style.display = 'inline-block';
+      viewIndex = data.labels.length - 1;
+      updateGraphView();
     });
 
     playBtn.addEventListener('click', () => {
       paused = false;
       pauseBtn.disabled = false;
       playBtn.disabled = true;
+      backBtn.style.display = 'none';
+      forwardBtn.style.display = 'none';
+      updateGraphView();
     });
+
+    backBtn.addEventListener('click', () => {
+      if(viewIndex > 19) {
+        viewIndex--;
+        updateGraphView();
+      }
+    });
+
+    forwardBtn.addEventListener('click', () => {
+      if(viewIndex < data.labels.length - 1) {
+        viewIndex++;
+        updateGraphView();
+      }
+    });
+
+    function updateGraphView(){
+      if(!paused){
+        const lastLabels = data.labels.slice(-20);
+        const lastData = data.datasets[0].data.slice(-20);
+        myChart.data.labels = lastLabels;
+        myChart.data.datasets[0].data = lastData;
+      } else {
+        const start = Math.max(0, viewIndex - 19);
+        const end = viewIndex + 1;
+        myChart.data.labels = data.labels.slice(start, end);
+        myChart.data.datasets[0].data = data.datasets[0].data.slice(start, end);
+      }
+      myChart.update();
+    }
 
     client.on('connect', () => {
       console.log('Conectado al broker MQTT');
@@ -330,3 +379,4 @@
   </script>
 </body>
 </html>
+
