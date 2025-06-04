@@ -3,14 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <title>Medidor de energía CGE</title>
+
+  <!-- Chart.js + Zoom Plugin -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
 
+    /* Variables CSS para temas claro/oscuro */
+    :root {
+      --color-bg-light: #fff;
+      --color-text-light: #333;
+      --color-bg-dark: #0b1e3d;
+      --color-text-dark: #f0f0f0;
+      --color-primary: #0a3d66;
+      --color-primary-light: #0a72c1;
+      --color-accent: #ffc72c;
+      --color-table-header-bg-light: var(--color-primary);
+      --color-table-header-bg-dark: #144372;
+    }
+
     body {
-      background-color: #fff;
-      color: #333;
+      background-color: var(--color-bg-light);
+      color: var(--color-text-light);
       font-family: 'Inter', sans-serif;
       margin: 0;
       padding: 30px 20px;
@@ -18,6 +35,11 @@
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
+      transition: background-color 0.4s ease, color 0.4s ease;
+    }
+    body.dark-mode {
+      background-color: var(--color-bg-dark);
+      color: var(--color-text-dark);
     }
     #logo-fijo {
       position: fixed;
@@ -27,24 +49,37 @@
       height: auto;
       z-index: 1000;
       filter: drop-shadow(0 0 5px rgba(0,0,0,0.1));
+      transition: filter 0.4s ease;
+    }
+    body.dark-mode #logo-fijo {
+      filter: drop-shadow(0 0 8px rgba(255, 199, 44, 0.9));
     }
     h1 {
       margin-top: 0;
-      margin-bottom: 25px;
-      color: #0a3d66; /* Azul oscuro serio */
+      margin-bottom: 15px;
+      color: var(--color-primary);
       font-weight: 700;
       font-size: 2.5rem;
       text-align: center;
       user-select: none;
+      transition: color 0.4s ease;
+    }
+    body.dark-mode h1 {
+      color: var(--color-accent);
     }
     canvas {
-      background-color: #f5faff; /* celeste muy claro */
+      background-color: #f5faff;
       border-radius: 12px;
       box-shadow: 0 0 15px rgba(10, 61, 102, 0.2);
       display: block;
       margin: 0 auto 25px auto;
       width: 900px !important;
       height: 450px !important;
+      transition: background-color 0.4s ease;
+    }
+    body.dark-mode canvas {
+      background-color: #144372;
+      box-shadow: 0 0 25px rgba(255, 199, 44, 0.4);
     }
     #controls {
       text-align: center;
@@ -52,8 +87,8 @@
     }
     button {
       background: none;
-      border: 2px solid #0a3d66;
-      color: #0a3d66;
+      border: 2px solid var(--color-primary);
+      color: var(--color-primary);
       cursor: pointer;
       margin: 0 12px;
       padding: 8px;
@@ -61,7 +96,7 @@
       transition: background-color 0.3s ease, color 0.3s ease;
     }
     button:hover:not(:disabled) {
-      background-color: #0a3d66;
+      background-color: var(--color-primary);
       color: #fff;
     }
     button:disabled {
@@ -69,6 +104,14 @@
       color: #bbb;
       cursor: not-allowed;
       opacity: 0.7;
+    }
+    body.dark-mode button {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+    body.dark-mode button:hover:not(:disabled) {
+      background-color: var(--color-accent);
+      color: #0b1e3d;
     }
     svg {
       width: 32px;
@@ -80,18 +123,28 @@
       width: 900px;
       border-collapse: separate;
       border-spacing: 0 8px;
-      color: #333;
+      color: var(--color-text-light);
       font-size: 16px;
       box-shadow: 0 0 15px rgba(10, 61, 102, 0.15);
       border-radius: 12px;
       overflow: hidden;
       background: #fafcff;
+      transition: background-color 0.4s ease, color 0.4s ease;
+    }
+    body.dark-mode table {
+      background: #10375c;
+      color: var(--color-text-dark);
+      box-shadow: 0 0 25px rgba(255, 199, 44, 0.4);
     }
     thead tr {
-      background-color: #0a3d66;
+      background-color: var(--color-table-header-bg-light);
       color: #fff;
       text-align: left;
       user-select: none;
+      transition: background-color 0.4s ease;
+    }
+    body.dark-mode thead tr {
+      background-color: var(--color-table-header-bg-dark);
     }
     th, td {
       padding: 14px 20px;
@@ -102,8 +155,14 @@
       border-radius: 10px;
       user-select: text;
     }
+    body.dark-mode tbody tr {
+      background-color: #215a94;
+    }
     tbody tr:hover {
       background-color: #c7dbf8;
+    }
+    body.dark-mode tbody tr:hover {
+      background-color: #2a73c1;
     }
     tbody tr td {
       border-bottom: none;
@@ -114,20 +173,74 @@
       justify-content: center;
       align-items: center;
       margin-top: 18px;
-      color: #0a3d66;
+      color: var(--color-primary);
       font-size: 1rem;
       user-select: none;
       gap: 15px;
+      transition: color 0.4s ease;
+    }
+    body.dark-mode #pagination {
+      color: var(--color-accent);
     }
     #pageInfo {
       font-weight: 600;
-      color: #0a3d66;
+      color: var(--color-primary);
+      transition: color 0.4s ease;
     }
+    body.dark-mode #pageInfo {
+      color: var(--color-accent);
+    }
+
+    /* Nuevo: indicador de conexión */
+    #connectionStatus {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 15px;
+      user-select: none;
+      color: var(--color-primary);
+      transition: color 0.4s ease;
+    }
+    body.dark-mode #connectionStatus {
+      color: var(--color-accent);
+    }
+
+    /* Nuevo: toggle modo oscuro */
+    #darkModeToggle {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: var(--color-primary);
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 0 10px rgba(10, 61, 102, 0.4);
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    #darkModeToggle:hover {
+      background-color: var(--color-primary-light);
+    }
+    body.dark-mode #darkModeToggle {
+      background: var(--color-accent);
+      color: #0b1e3d;
+      box-shadow: 0 0 15px rgba(255, 199, 44, 0.7);
+    }
+    body.dark-mode #darkModeToggle:hover {
+      background-color: #f4c320;
+    }
+
   </style>
 </head>
 <body>
   <img id="logo-fijo" src="logo puerto.png" alt="Logo Puerto" />
+  <button id="darkModeToggle" title="Alternar modo oscuro">Modo oscuro</button>
+
   <h1>Medidor de energía CGE</h1>
+
+  <div id="connectionStatus">Estado: <span id="connText">Desconectado</span></div>
 
   <canvas id="myChart" width="900" height="450"></canvas>
 
@@ -180,8 +293,30 @@
   </div>
 
   <script>
+    // Variables para modo oscuro persistente
+    const bodyEl = document.body;
+    const darkToggle = document.getElementById('darkModeToggle');
+    const savedTheme = localStorage.getItem('theme');
+    if(savedTheme === 'dark') {
+      bodyEl.classList.add('dark-mode');
+      darkToggle.textContent = 'Modo claro';
+    }
+
+    darkToggle.addEventListener('click', () => {
+      bodyEl.classList.toggle('dark-mode');
+      if(bodyEl.classList.contains('dark-mode')) {
+        darkToggle.textContent = 'Modo claro';
+        localStorage.setItem('theme', 'dark');
+      } else {
+        darkToggle.textContent = 'Modo oscuro';
+        localStorage.setItem('theme', 'light');
+      }
+    });
+
+    // MQTT y Chart.js
     const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
     const ctx = document.getElementById('myChart').getContext('2d');
+    const connText = document.getElementById('connText');
 
     const data = {
       labels: [], 
@@ -215,11 +350,23 @@
             backgroundColor: '#0a72c1',
             titleFont: { size: 16, weight: 'bold' },
             bodyFont: { size: 14 }
+          },
+          zoom: {
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+              onZoomComplete: () => { /* opcional: desactivar pausado al zoom si quieres */ }
+            },
+            pan: {
+              enabled: true,
+              mode: 'x'
+            }
           }
         },
         scales: {
           x: {
-            title: { display: true, text: 'tiempo', color: '#0a3d66', font: { size: 18, weight: 'bold' } },
+            title: { display: true, text: 'Tiempo', color: '#0a3d66', font: { size: 18, weight: 'bold' } },
             ticks: { color: '#0a3d66', maxRotation: 45, minRotation: 30 },
             grid: { color: 'rgba(10, 61, 102, 0.15)' }
           },
@@ -298,7 +445,21 @@
 
     client.on('connect', () => {
       console.log('Conectado al broker MQTT');
+      connText.textContent = 'Conectado';
       client.subscribe('MEDIDOR_CGE');
+    });
+
+    client.on('reconnect', () => {
+      connText.textContent = 'Reconectando...';
+    });
+
+    client.on('close', () => {
+      connText.textContent = 'Desconectado';
+    });
+
+    client.on('error', (err) => {
+      console.error('Error MQTT:', err);
+      connText.textContent = 'Error de conexión';
     });
 
     client.on('message', (topic, message) => {
