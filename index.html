@@ -6,86 +6,146 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
+
     body {
-      background-color: black;
-      color: white;
-      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+      font-family: 'Inter', sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
     }
     #logo-fijo {
       position: fixed;
-      top: 10px;
-      left: 10px;
-      width: 80px;
+      top: 15px;
+      left: 15px;
+      width: 100px;
       height: auto;
       z-index: 1000;
+      filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
     }
     h1 {
-      text-align: center;
       margin-top: 0;
-      margin-bottom: 20px;
-      color: white;
+      margin-bottom: 25px;
+      color: #bb86fc;
+      font-weight: 700;
+      font-size: 2.5rem;
+      text-align: center;
+      user-select: none;
+      text-shadow: 0 0 8px rgba(187, 134, 252, 0.7);
     }
     canvas {
-      background-color: black;
-      border-radius: 10px;
+      background-color: #1f1f1f;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(187, 134, 252, 0.25);
       display: block;
-      margin: 0 auto;
+      margin: 0 auto 25px auto;
       width: 900px !important;
       height: 450px !important;
     }
     #controls {
       text-align: center;
-      margin-top: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 30px;
     }
     button {
-      background-color: #4bc0c0;
+      background-color: #bb86fc;
       border: none;
-      color: black;
-      font-weight: bold;
-      padding: 10px 20px;
-      margin: 0 10px;
-      border-radius: 5px;
+      color: #121212;
+      font-weight: 600;
+      padding: 12px 28px;
+      margin: 0 12px;
+      border-radius: 8px;
       cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      box-shadow: 0 4px 8px rgba(187, 134, 252, 0.4);
+      user-select: none;
     }
-    button:hover {
-      background-color: #36a3a3;
+    button:hover:not(:disabled) {
+      background-color: #9a67ea;
+      color: #fff;
+      box-shadow: 0 6px 12px rgba(154, 103, 234, 0.6);
+    }
+    button:disabled {
+      background-color: #555;
+      color: #999;
+      cursor: not-allowed;
+      box-shadow: none;
     }
     table {
       width: 900px;
-      margin: 0 auto;
-      border-collapse: collapse;
-      color: white;
-      font-size: 14px;
+      border-collapse: separate;
+      border-spacing: 0 8px;
+      color: #e0e0e0;
+      font-size: 16px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    thead tr {
+      background-color: #2c2c2c;
+      text-align: left;
+      user-select: none;
     }
     th, td {
-      border: 1px solid #555;
-      padding: 8px 12px;
-      text-align: center;
+      padding: 14px 20px;
     }
     th {
-      background-color: #222;
+      font-weight: 600;
+      font-size: 1rem;
+      color: #bb86fc;
+      border-bottom: 2px solid #4a148c;
+    }
+    tbody tr {
+      background-color: #1e1e1e;
+      transition: background-color 0.2s ease;
+      border-radius: 10px;
+      user-select: text;
+    }
+    tbody tr:hover {
+      background-color: #3a2f72;
+    }
+    tbody tr td {
+      border-bottom: none;
     }
     #pagination {
-      text-align: center;
-      margin-top: 10px;
-      color: white;
+      width: 900px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 18px;
+      color: #bbb;
+      font-size: 1rem;
+      user-select: none;
+      gap: 15px;
     }
     #pagination button {
-      background-color: #4bc0c0;
-      border: none;
-      color: black;
-      font-weight: bold;
-      padding: 6px 12px;
-      margin: 0 5px;
-      border-radius: 5px;
+      background-color: #7c4dff;
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      box-shadow: 0 3px 6px rgba(124, 77, 255, 0.5);
+      transition: background-color 0.25s ease;
+    }
+    #pagination button:hover:not(:disabled) {
+      background-color: #6200ea;
+      box-shadow: 0 4px 8px rgba(98, 0, 234, 0.6);
       cursor: pointer;
     }
     #pagination button:disabled {
-      background-color: #777;
+      background-color: #3f3f3f;
+      color: #666;
       cursor: not-allowed;
+      box-shadow: none;
+    }
+    #pageInfo {
+      font-weight: 600;
+      color: #ccc;
     }
   </style>
 </head>
@@ -125,11 +185,14 @@
       datasets: [{
         label: 'Medidor CGE (kWh)', 
         data: [],
-        borderColor: 'rgb(75, 192, 192)',
-        fill: false,
-        tension: 0.1,
-        pointRadius: 4,
-        pointHoverRadius: 6
+        borderColor: '#bb86fc',
+        backgroundColor: 'rgba(187, 134, 252, 0.2)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 3,
+        hoverBorderWidth: 4
       }]
     };
 
@@ -138,22 +201,35 @@
       data: data,
       options: {
         animation: false,
+        responsive: true,
         plugins: {
           legend: {
-            labels: { color: 'white', font: { size: 14 } }
+            labels: { color: '#ddd', font: { size: 16, weight: 'bold' } }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: '#4a148c',
+            titleFont: { size: 16, weight: 'bold' },
+            bodyFont: { size: 14 }
           }
         },
         scales: {
           x: {
-            title: { display: true, text: 'Hora', color: 'white', font: { size: 16 } },
-            ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.2)' }
+            title: { display: true, text: 'Hora', color: '#ddd', font: { size: 18, weight: 'bold' } },
+            ticks: { color: '#ccc', maxRotation: 45, minRotation: 30 },
+            grid: { color: 'rgba(255,255,255,0.15)' }
           },
           y: {
-            title: { display: true, text: 'Valor (kWh)', color: 'white', font: { size: 16 } },
-            ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.2)' }
+            title: { display: true, text: 'Valor (kWh)', color: '#ddd', font: { size: 18, weight: 'bold' } },
+            ticks: { color: '#ccc' },
+            grid: { color: 'rgba(255,255,255,0.15)' }
           }
+        },
+        interaction: {
+          mode: 'nearest',
+          axis: 'x',
+          intersect: false
         }
       }
     };
