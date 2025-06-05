@@ -204,64 +204,11 @@
       color: var(--color-accent);
     }
 
-    /* Toggle modo oscuro */
-    #darkModeToggle {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      background: var(--color-primary);
-      color: #fff;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      box-shadow: 0 0 10px rgba(10, 61, 102, 0.4);
-      transition: background-color 0.3s ease;
-      user-select: none;
-      z-index: 1100;
-    }
-    #darkModeToggle:hover {
-      background-color: var(--color-primary-light);
-    }
-    body.dark-mode #darkModeToggle {
-      background: var(--color-accent);
-      color: #0b1e3d;
-      box-shadow: 0 0 15px rgba(255, 199, 44, 0.7);
-    }
-    body.dark-mode #darkModeToggle:hover {
-      background-color: #f4c320;
+    /* Menu de selección */
+    #graphMenu {
+      margin-bottom: 20px;
     }
 
-    /* Alertas */
-    #alertContainer {
-      display:none; max-width:900px; margin: 0 auto 20px; padding:10px; border-radius:6px;
-      background:#ff4c4c; color:#fff; font-weight:bold; text-align:center; font-size:1.2rem;
-      user-select:none; box-shadow: 0 0 15px rgba(255,0,0,0.5);
-    }
-    #alertHistory {
-      display:none; max-width:900px; margin: 0 auto 30px; background:#faf0f0; border:1px solid #ff4c4c;
-      border-radius:6px; padding:10px; max-height: 150px; overflow-y: auto;
-      font-family: monospace; font-size: 0.9rem; color:#900;
-    }
-    #toggleAlertsBtn {
-      margin-bottom:15px; display:none; cursor:pointer; background:#0a3d66; color:#fff;
-      padding:8px 14px; border:none; border-radius:6px; font-weight:600; user-select:none;
-    }
-    #toggleAlertsBtn:hover {
-      background: #0a72c1;
-    }
-    body.dark-mode #alertHistory {
-      background: #10375c; color: #ff9999; border-color: #ff4c4c;
-      box-shadow: 0 0 25px rgba(255, 199, 44, 0.4);
-    }
-    body.dark-mode #toggleAlertsBtn {
-      background: var(--color-accent); color: var(--color-bg-dark);
-      box-shadow: 0 0 15px rgba(255, 199, 44, 0.7);
-    }
-    body.dark-mode #toggleAlertsBtn:hover {
-      background-color: #f4c320;
-    }
   </style>
 </head>
 <body>
@@ -269,6 +216,12 @@
   <button id="darkModeToggle" title="Alternar modo oscuro">Modo oscuro</button>
 
   <h1>Medidor de energía CGE</h1>
+
+  <!-- Menu para seleccionar gráfico -->
+  <div id="graphMenu">
+    <button id="gruaButton" title="Consumo de Grúas">Consumo de Grúas</button>
+    <button id="cgeButton" title="Consumo de CGE">Consumo de CGE</button>
+  </div>
 
   <div id="connectionStatus">Estado: <span id="connText">Desconectado</span></div>
 
@@ -289,22 +242,6 @@
     <button id="playBtn" title="Reanudar" disabled>
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <polygon points="8,5 19,12 8,19"></polygon>
-      </svg>
-    </button>
-    <button id="backBtn" title="Retroceder" style="display:none;">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <polygon points="15,6 9,12 15,18"></polygon>
-      </svg>
-    </button>
-    <button id="forwardBtn" title="Adelantar" style="display:none;">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <polygon points="9,6 15,12 9,18"></polygon>
-      </svg>
-    </button>
-    <button id="zoomToggle" title="Activar/Desactivar zoom">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="width:28px; height:28px;">
-        <circle cx="11" cy="11" r="7" stroke="#0a3d66" stroke-width="2" fill="none"/>
-        <line x1="16" y1="16" x2="21" y2="21" stroke="#0a3d66" stroke-width="2" />
       </svg>
     </button>
   </div>
@@ -624,6 +561,40 @@
       updatePaginationButtons();
     }
   });
+
+  // Cambiar entre gráficos
+  document.getElementById('gruaButton').addEventListener('click', () => {
+    myChart.data.datasets = [{
+      label: 'Consumo de Grúas',
+      data: [ /* Aquí irían los datos de los cinco tópicos */ ],
+      borderColor: '#ff7f00',
+      backgroundColor: 'rgba(255, 127, 0, 0.3)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      borderWidth: 3,
+      hoverBorderWidth: 4
+    }];
+    myChart.update();
+  });
+
+  document.getElementById('cgeButton').addEventListener('click', () => {
+    myChart.data.datasets = [{
+      label: 'Consumo de CGE',
+      data: [],
+      borderColor: '#0a72c1',
+      backgroundColor: 'rgba(10, 114, 193, 0.3)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      borderWidth: 3,
+      hoverBorderWidth: 4
+    }];
+    myChart.update();
+  });
+
 </script>
 </body>
 </html>
