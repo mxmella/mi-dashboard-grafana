@@ -5,7 +5,7 @@
   <title>Medidor de energía CGE</title>
 
   <!-- Chart.js + Zoom Plugin -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
@@ -361,68 +361,18 @@
 
   const data = {
     labels: [], 
-    datasets: [
-      {
-        label: 'I_STS1',
-        data: [],
-        borderColor: '#0a72c1',
-        backgroundColor: 'rgba(10, 114, 193, 0)', // Deshabilitado el relleno
-        fill: false, // Asegúrate de que el área bajo la curva no se rellene
-        tension: 0.3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderWidth: 3,
-        hoverBorderWidth: 4
-      },
-      {
-        label: 'I_STS2',
-        data: [],
-        borderColor: '#72c10a',
-        backgroundColor: 'rgba(114, 193, 10, 0)',
-        fill: false, // Deshabilitado el relleno
-        tension: 0.3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderWidth: 3,
-        hoverBorderWidth: 4
-      },
-      {
-        label: 'I_STS3',
-        data: [],
-        borderColor: '#c10a72',
-        backgroundColor: 'rgba(193, 10, 114, 0)',
-        fill: false, // Deshabilitado el relleno
-        tension: 0.3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderWidth: 3,
-        hoverBorderWidth: 4
-      },
-      {
-        label: 'I_STS4',
-        data: [],
-        borderColor: '#72a0c1',
-        backgroundColor: 'rgba(114, 160, 193, 0)',
-        fill: false, // Deshabilitado el relleno
-        tension: 0.3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderWidth: 3,
-        hoverBorderWidth: 4
-      },
-      {
-        label: 'I_STS5',
-        data: [],
-        borderColor: '#a072c1',
-        backgroundColor: 'rgba(160, 114, 193, 0)',
-        fill: false, // Deshabilitado el relleno
-        tension: 0.3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderWidth: 3,
-        hoverBorderWidth: 4
-      }
-    ]
+    datasets: [{
+      label: 'Medidor CGE (I Max)', 
+      data: [],
+      borderColor: '#0a72c1',
+      backgroundColor: 'rgba(10, 114, 193, 0.3)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      borderWidth: 3,
+      hoverBorderWidth: 4
+    }]
   };
 
   const config = {
@@ -443,9 +393,8 @@
           bodyFont: { size: 14 }
         },
         zoom: {
-          wheel: { enabled: true },   // Habilitar zoom con rueda del mouse
-          pinch: { enabled: true },   // Habilitar zoom con pellizco
-          drag: { enabled: true }     // Habilitar movimiento del gráfico
+          pan: { enabled: false, mode: 'x' },
+          zoom: { enabled: false, mode: 'x', wheel: { enabled: true }, pinch: { enabled: true } }
         }
       },
       scales: {
@@ -474,32 +423,125 @@
   let allData = [];
   let viewIndex = -1;
 
-  // MQTT Suscripción a los 5 topics
+  const pauseBtn = document.getElementById('pauseBtn');
+  const playBtn = document.getElementById('playBtn');
+  const backBtn = document.getElementById('backBtn');
+  const forwardBtn = document.getElementById('forwardBtn');
+  const zoomToggle = document.getElementById('zoomToggle');
+
+  // Alertas
+  const alertContainer = document.getElementById('alertContainer');
+  const alertHistoryDiv = document.getElementById('alertHistory');
+  const toggleAlertsBtn = document.getElementById('toggleAlertsBtn');
+  let alertActive = false;
+  let alertHistory = [];
+
+  toggleAlertsBtn.addEventListener('click', () => {
+    if(alertHistoryDiv.style.display === 'none') {
+      alertHistoryDiv.style.display = 'block';
+      toggleAlertsBtn.textContent = 'Ocultar Historial de Alertas';
+    } else {
+      alertHistoryDiv.style.display = 'none';
+      toggleAlertsBtn.textContent = 'Mostrar Historial de Alertas';
+    }
+  });
+
+  function addAlert(value, datetime) {
+    const alertText = `Alerta en ${datetime}: valor = ${value.toFixed(2)}`;
+    alertHistory.push(alertText);
+    alertHistoryDiv.innerHTML = alertHistory.map(a => `<div>${a}</div>`).join('');
+    toggleAlertsBtn.style.display = 'inline-block';
+
+    alertContainer.style.display = 'block';
+    alertContainer.textContent = `⚠️ Alerta: Valor alto detectado! Valor actual: ${value.toFixed(2)}`;
+
+    setTimeout(() => {
+      if(alertActive) return;
+      alertContainer.style.display = 'none';
+    }, 5000);
+  }
+
+  pauseBtn.addEventListener('click', () => {
+    paused = true;
+    pauseBtn.disabled = true;
+    playBtn.disabled = false;
+    backBtn.style.display = 'inline-block';
+    forwardBtn.style.display = 'inline-block';
+    viewIndex = data.labels.length - 1;
+    updateGraphView();
+  });
+
+  playBtn.addEventListener('click', () => {
+    paused = false;
+    pauseBtn.disabled = false;
+    playBtn.disabled = true;
+    backBtn.style.display = 'none';
+    forwardBtn.style.display = 'none';
+    updateGraphView();
+  });
+
+  backBtn.addEventListener('click', () => {
+    if(viewIndex > 19) {
+      viewIndex--;
+      updateGraphView();
+    }
+  });
+
+  forwardBtn.addEventListener('click', () => {
+    if(viewIndex < data.labels.length - 1) {
+      viewIndex++;
+      updateGraphView();
+    }
+  });
+
+  zoomToggle.addEventListener('click', () => {
+    const zoomPlugin = myChart.getPlugin('zoom');
+    const enabled = zoomPlugin._enabled || false;
+    if(enabled) {
+      zoomPlugin.disable();
+      zoomToggle.style.backgroundColor = 'transparent';
+    } else {
+      zoomPlugin.enable();
+      zoomToggle.style.backgroundColor = 'var(--color-primary)';
+    }
+  });
+
+  function updateGraphView(){
+    if(!paused){
+      const lastLabels = data.labels.slice(-20);
+      const lastData = data.datasets[0].data.slice(-20);
+      myChart.data.labels = lastLabels;
+      myChart.data.datasets[0].data = lastData;
+    } else {
+      const start = Math.max(0, viewIndex - 19);
+      const end = viewIndex + 1;
+      myChart.data.labels = data.labels.slice(start, end);
+      myChart.data.datasets[0].data = data.datasets[0].data.slice(start, end);
+    }
+    myChart.update();
+  }
+
   client.on('connect', () => {
     console.log('Conectado al broker MQTT');
     connText.textContent = 'Conectado';
-    client.subscribe('I_STS1');
-    client.subscribe('I_STS2');
-    client.subscribe('I_STS3');
-    client.subscribe('I_STS4');
-    client.subscribe('I_STS5');
+    client.subscribe('MEDIDOR_CGE');
+  });
+
+  client.on('reconnect', () => {
+    connText.textContent = 'Reconectando...';
+  });
+
+  client.on('close', () => {
+    connText.textContent = 'Desconectado';
+  });
+
+  client.on('error', (err) => {
+    console.error('Error MQTT:', err);
+    connText.textContent = 'Error de conexión';
   });
 
   client.on('message', (topic, message) => {
-    let datasetIndex = -1;
-    if (topic === 'I_STS1') {
-      datasetIndex = 0;
-    } else if (topic === 'I_STS2') {
-      datasetIndex = 1;
-    } else if (topic === 'I_STS3') {
-      datasetIndex = 2;
-    } else if (topic === 'I_STS4') {
-      datasetIndex = 3;
-    } else if (topic === 'I_STS5') {
-      datasetIndex = 4;
-    }
-
-    if (datasetIndex !== -1) {
+    if (topic === 'MEDIDOR_CGE') {
       const value = parseFloat(message.toString());
       if (!isNaN(value)) {
         const now = new Date();
@@ -523,17 +565,18 @@
 
         if (!paused) {
           data.labels.push(timeLabel);
-          data.datasets[datasetIndex].data.push(value);
+          data.datasets[0].data.push(value);
 
           if (data.labels.length > 20) {
             data.labels.shift();
-            data.datasets.forEach(dataset => dataset.data.shift());
+            data.datasets[0].data.shift();
           }
           myChart.update();
         }
       }
     }
   });
+
   const tableBody = document.querySelector('#dataTable tbody');
   const prevPageBtn = document.getElementById('prevPage');
   const nextPageBtn = document.getElementById('nextPage');
@@ -584,3 +627,4 @@
 </script>
 </body>
 </html>
+
