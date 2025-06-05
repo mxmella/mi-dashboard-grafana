@@ -278,6 +278,7 @@
   <div id="alertHistory"></div>
 
   <canvas id="myChart" width="900" height="450"></canvas>
+  <canvas id="myChart2" width="900" height="450"></canvas> <!-- Nuevo gráfico para I_MAX_GRUAS -->
 
   <div id="controls">
     <button id="pauseBtn" title="Pausar">
@@ -357,12 +358,29 @@
   // MQTT y Chart.js con Zoom plugin
   const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
   const ctx = document.getElementById('myChart').getContext('2d');
+  const ctx2 = document.getElementById('myChart2').getContext('2d'); // Gráfico 2
   const connText = document.getElementById('connText');
 
   const data = {
     labels: [], 
     datasets: [{
       label: 'Medidor CGE (I Max)', 
+      data: [],
+      borderColor: '#0a72c1',
+      backgroundColor: 'rgba(10, 114, 193, 0.3)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      borderWidth: 3,
+      hoverBorderWidth: 4
+    }]
+  };
+
+  const data2 = {
+    labels: [],
+    datasets: [{
+      label: 'I_MAX_GRUAS', 
       data: [],
       borderColor: '#0a72c1',
       backgroundColor: 'rgba(10, 114, 193, 0.3)',
@@ -417,7 +435,50 @@
     }
   };
 
+  const config2 = { // Segundo gráfico para I_MAX_GRUAS
+    type: 'line',
+    data: data2,
+    options: {
+      animation: false,
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', font: { size: 16, weight: 'bold' } }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: '#0a72c1',
+          titleFont: { size: 16, weight: 'bold' },
+          bodyFont: { size: 14 }
+        },
+        zoom: {
+          pan: { enabled: false, mode: 'x' },
+          zoom: { enabled: false, mode: 'x', wheel: { enabled: true }, pinch: { enabled: true } }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Tiempo', color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', font: { size: 18, weight: 'bold' } },
+          ticks: { color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', maxRotation: 45, minRotation: 30 },
+          grid: { color: 'rgba(10, 61, 102, 0.15)' }
+        },
+        y: {
+          title: { display: true, text: 'I_MAX_GRUAS', color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66', font: { size: 18, weight: 'bold' } },
+          ticks: { color: getComputedStyle(document.body).getPropertyValue('--color-primary').trim() || '#0a3d66' },
+          grid: { color: 'rgba(10, 61, 102, 0.15)' }
+        }
+      },
+      interaction: {
+        mode: 'nearest',
+        axis: 'x',
+        intersect: false
+      }
+    }
+  };
+
   const myChart = new Chart(ctx, config);
+  const myChart2 = new Chart(ctx2, config2);
 
   let paused = false;
   let allData = [];
@@ -512,19 +573,29 @@
       const lastData = data.datasets[0].data.slice(-20);
       myChart.data.labels = lastLabels;
       myChart.data.datasets[0].data = lastData;
+
+      const lastLabels2 = data2.labels.slice(-20);
+      const lastData2 = data2.datasets[0].data.slice(-20);
+      myChart2.data.labels = lastLabels2;
+      myChart2.data.datasets[0].data = lastData2;
     } else {
       const start = Math.max(0, viewIndex - 19);
       const end = viewIndex + 1;
       myChart.data.labels = data.labels.slice(start, end);
       myChart.data.datasets[0].data = data.datasets[0].data.slice(start, end);
+
+      myChart2.data.labels = data2.labels.slice(start, end);
+      myChart2.data.datasets[0].data = data2.datasets[0].data.slice(start, end);
     }
     myChart.update();
+    myChart2.update();
   }
 
   client.on('connect', () => {
     console.log('Conectado al broker MQTT');
     connText.textContent = 'Conectado';
     client.subscribe('MEDIDOR_CGE');
+    client.subscribe('I_MAX_GRUAS');  // Suscripción al topic I_MAX_GRUAS
   });
 
   client.on('reconnect', () => {
@@ -575,6 +646,24 @@
         }
       }
     }
+    if (topic === 'I_MAX_GRUAS') {  // Mensajes de I_MAX_GRUAS
+      const value = parseFloat(message.toString());
+      if (!isNaN(value)) {
+        const now = new Date();
+        const timeLabel = now.toLocaleTimeString();
+        const fullDate = now.toLocaleString();
+
+        data2.labels.push(timeLabel);
+        data2.datasets[0].data.push(value);
+
+        if (data2.labels.length > 20) {
+          data2.labels.shift();
+          data2.datasets[0].data.shift();
+        }
+        myChart2.update();
+      }
+    }
+
   });
 
   const tableBody = document.querySelector('#dataTable tbody');
@@ -627,4 +716,3 @@
 </script>
 </body>
 </html>
-
