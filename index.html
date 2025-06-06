@@ -5,8 +5,7 @@
   <title>Medidor de energía CGE</title>
 
   <!-- Chart.js + Zoom Plugin -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
   <style>
@@ -270,13 +269,38 @@
 
   <h1>Medidor de energía CGE</h1>
 
-   <div style="border: 2px solid #0a72c1; padding: 10px; margin-bottom: 20px; background-color: #f5faff;">
+   <div style="border: 2px solid #0a72c1; padding: 10px; margin-bottom: 20px; background-color: #76acdf;">
   <strong></strong> <span id="topic1">MEDIDOR_CGE ((###))</span> <br>
   </div>
 
-  <div style="border: 2px solid #0a72c1; padding: 10px; margin-bottom: 20px; background-color: #f5faff;">
-  <strong></strong> <span id="topic2">I_MAX_GRUAS ((###)</span> <br>
+  <div style="border: 2px solid #0a72c1; padding: 10px; margin-bottom: 20px; background-color: #76acdf;">
+  <strong></strong> <span id="topic2">I_MAX_GRUAS ((###))</span> <br>
   </div>
+
+  
+   <!-- Nuevos topics I_STS1, I_STS2, I_STS3, I_STS4, I_STS5 -->
+   <table style="width: 100%; border-spacing: 20px;">
+    <tr>
+      <td style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
+        <span id="topic3">I_STS1 ((###))</span>
+      </td>
+      <td style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
+        <span id="topic4">I_STS2 ((###))</span>
+      </td>
+      <td style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
+        <span id="topic5">I_STS3 ((###))</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
+        <span id="topic6">I_STS4 ((###))</span>
+      </td>
+      <td style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
+        <span id="topic7">I_STS5 ((###))</span>
+      </td>
+      <td></td> <!-- Espacio vacío en la tercera celda para que ocupe dos filas -->
+    </tr>
+  </table>
 
   <div id="connectionStatus">Estado: <span id="connText">Desconectado</span></div>
 
@@ -323,6 +347,7 @@
       <tr>
         <th scope="col" data-sort="datetime" style="cursor:pointer;">Fecha y Hora &#x25B2;&#x25BC;</th>
         <th scope="col" data-sort="value" style="cursor:pointer;">Valor Medidor CGE</th>
+        <th scope="col" data-sort="value" style="cursor:pointer;">Valor I_MAX_GRUAS</th> <!-- Nueva columna -->
       </tr>
     </thead>
     <tbody></tbody>
@@ -418,10 +443,10 @@
           titleFont: { size: 16, weight: 'bold' },
           bodyFont: { size: 14 }
         },
-        zoom: {
-          pan: { enabled: false, mode: 'x' },
-          zoom: { enabled: false, mode: 'x', wheel: { enabled: true }, pinch: { enabled: true } }
-        }
+        //zoom: {
+          //pan: { enabled: false, mode: 'x' },
+          //zoom: { enabled: false, mode: 'x', wheel: { enabled: true }, pinch: { enabled: true } }
+        //}
       },
       scales: {
         x: {
@@ -460,10 +485,10 @@
           titleFont: { size: 16, weight: 'bold' },
           bodyFont: { size: 14 }
         },
-        zoom: {
-          pan: { enabled: false, mode: 'x' },
-          zoom: { enabled: false, mode: 'x', wheel: { enabled: true }, pinch: { enabled: true } }
-        }
+       // zoom: {
+         // pan: { enabled: false, mode: 'x' },
+          //zoom: { enabled: false, mode: 'x', wheel: { enabled: true }, pinch: { enabled: true } }
+        //}
       },
       scales: {
         x: {
@@ -598,14 +623,20 @@
     myChart.update();
     myChart2.update();
   }
-
+   // Suscripción al topic
   client.on('connect', () => {
     console.log('Conectado al broker MQTT');
     connText.textContent = 'Conectado';
     client.subscribe('MEDIDOR_CGE');
     client.subscribe('I_MAX_GRUAS');  // Suscripción al topic I_MAX_GRUAS
+    client.subscribe('I_STS1');
+    client.subscribe('I_STS2');
+    client.subscribe('I_STS3');
+    client.subscribe('I_STS4');
+    client.subscribe('I_STS5');
   });
-
+   //
+   
   client.on('reconnect', () => {
     connText.textContent = 'Reconectando...';
   });
@@ -631,7 +662,7 @@
         document.getElementById('topic1').innerHTML = `MEDIDOR_CGE : ${value.toFixed(2)} Amp`;
 
         
-        allData.push({datetime: fullDate, value: value});
+       allData.push({datetime: fullDate, value: value, valueImax: null});  // Agregar solo valor de MEDIDOR_CGE
         if(allData.length > 1000) allData.shift();
 
         renderTablePage(currentPage);
@@ -667,7 +698,14 @@
 
         // Actualizamos el recuadro de I_MAX_GRUAS (topic2)
          document.getElementById('topic2').innerHTML = `I_MAX_GRUAS : ${value.toFixed(2)} Amp`;
-        
+        // Añadir el valor de I_MAX_GRUAS a 'allData'
+        const lastIndex = allData.length - 1;
+        if (allData[lastIndex]) {
+           allData[lastIndex].valueImax = value;  // Asignar el valor de I_MAX_GRUAS al último elemento de allData
+        } else {
+          allData.push({ datetime: fullDate, value: null, valueImax: value });  // Si no hay datos previos, crear un nuevo objeto
+        }
+
         data2.labels.push(timeLabel);
         data2.datasets[0].data.push(value);
 
@@ -676,9 +714,39 @@
           data2.datasets[0].data.shift();
         }
         myChart2.update();
+
+        // Llamar a renderTablePage para actualizar la tabla
+        renderTablePage(currentPage);
+        updatePaginationButtons();
+        
       }
     }
+        // Manejo de los nuevos topics: I_STS1, I_STS2, I_STS3, I_STS4, I_STS5
+    const stsTopics = ['I_STS1', 'I_STS2', 'I_STS3', 'I_STS4', 'I_STS5'];
+    const topicIndex = stsTopics.indexOf(topic);
 
+    if (topicIndex >= 0) {  // Si es uno de los nuevos topics
+      const value = parseFloat(message.toString());
+      if (!isNaN(value)) {
+        const now = new Date();
+        const timeLabel = now.toLocaleTimeString();
+
+        // Actualizar el recuadro correspondiente para I_STS1, I_STS2, I_STS3, I_STS4, I_STS5
+        document.getElementById(`topic${topicIndex + 3}`).innerHTML = `${topic}: ${value.toFixed(2)} Amp`;
+
+        // Si hay algún dato previo, agregarlo al array allData
+        const lastIndex = allData.length - 1;
+        if (allData[lastIndex]) {
+          allData[lastIndex][topic] = value;  // Asignar el valor del nuevo topic al último elemento de allData
+        } else {
+          allData.push({ datetime: now.toLocaleString(), value: null, [topic]: value });  // Si no hay datos previos, crear un nuevo objeto
+        }
+
+        // Llamar a renderTablePage para actualizar la tabla
+        renderTablePage(currentPage);
+        updatePaginationButtons();
+      }
+    }
   });
 
   const tableBody = document.querySelector('#dataTable tbody');
@@ -697,10 +765,15 @@
       const tr = document.createElement('tr');
       const tdDate = document.createElement('td');
       const tdValue = document.createElement('td');
+      const tdValueImax = document.createElement('td');  // Nueva celda para I_MAX_GRUAS
+
       tdDate.textContent = row.datetime;
-      tdValue.textContent = row.value.toFixed(2);
+      tdValue.textContent = row.value ? row.value.toFixed(2) : 'N/A';  // Si el valor de MEDIDOR_CGE no está disponible, poner N/A
+      tdValueImax.textContent = row.valueImax ? row.valueImax.toFixed(2) : 'N/A';  // Si el valor de I_MAX_GRUAS no está disponible, poner N/A
+
       tr.appendChild(tdDate);
       tr.appendChild(tdValue);
+      tr.appendChild(tdValueImax);  // Añadir la nueva celda para I_MAX_GRUAS
       tableBody.appendChild(tr);
     }
     const totalPages = Math.min(1000, Math.max(1, Math.ceil(allData.length / rowsPerPage)));
