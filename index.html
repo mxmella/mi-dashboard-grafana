@@ -279,28 +279,57 @@
 
   
    <!-- Nuevos topics I_STS1, I_STS2, I_STS3, I_STS4, I_STS5 -->
-   <table style="width: 100%; border-spacing: 20px;">
-    <tr>
-      <td style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
-        <span id="topic3">I_STS1 ((###))</span>
-      </td>
-      <td style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
-        <span id="topic4">I_STS2 ((###))</span>
-      </td>
-      <td style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
-        <span id="topic5">I_STS3 ((###))</span>
-      </td>
-    </tr>
-    <tr>
-      <td style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
-        <span id="topic6">I_STS4 ((###))</span>
-      </td>
-      <td style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
-        <span id="topic7">I_STS5 ((###))</span>
-      </td>
-      <td></td> <!-- Espacio vacío en la tercera celda para que ocupe dos filas -->
-    </tr>
-  </table>
+  <table style="width: 100%; border-spacing: 20px;">
+  <tr>
+    <td id="topic3-cell" style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
+      <span id="topic3">I_STS1 ((###))</span>
+    </td>
+    <td id="topic4-cell" style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
+      <span id="topic4">I_STS2 ((###))</span>
+    </td>
+    <td id="topic5-cell" style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
+      <span id="topic5">I_STS3 ((###))</span>
+    </td>
+  </tr>
+  <tr>
+    <td id="topic6-cell" style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
+      <span id="topic6">I_STS4 ((###))</span>
+    </td>
+    <td id="topic7-cell" style="border: 2px solid #0a72c1; padding: 10px; background-color: #76acdf; text-align: center;">
+      <span id="topic7">I_STS5 ((###))</span>
+    </td>
+    <td></td> <!-- Espacio vacío en la tercera celda para que ocupe dos filas -->
+  </tr>
+</table>
+
+<script>
+// Función para actualizar los valores de los recuadros
+function updateTopics() {
+  const topics = [
+    { id: "topic3", value: 0 },
+    { id: "topic4", value: 0 },
+    { id: "topic5", value: 0 },
+    { id: "topic6", value: 0 },
+    { id: "topic7", value: 0 },
+  ];
+
+  topics.forEach(topic => {
+    const topicElement = document.getElementById(topic.id);
+    const cell = document.getElementById(topic.id + '-cell'); // Referencia a la celda correspondiente
+    topicElement.textContent = `${topic.id} (${topic.value} Amp)`;
+
+    // Si el valor supera 80, cambiamos el fondo a rojo
+    if (topic.value >=80.0) {
+      cell.style.backgroundColor = '#ff4c4c'; // Rojo
+    } else {
+      cell.style.backgroundColor = '#76acdf'; // Azul por defecto
+    }
+  });
+}
+// Llamar a la función para probar
+updateTopics();
+</script>
+  <!-- ------------ -->
 
   <div id="connectionStatus">Estado: <span id="connText">Desconectado</span></div>
 
@@ -332,12 +361,6 @@
     <button id="forwardBtn" title="Adelantar" style="display:none;">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <polygon points="9,6 15,12 9,18"></polygon>
-      </svg>
-    </button>
-    <button id="zoomToggle" title="Activar/Desactivar zoom">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="width:28px; height:28px;">
-        <circle cx="11" cy="11" r="7" stroke="#0a3d66" stroke-width="2" fill="none"/>
-        <line x1="16" y1="16" x2="21" y2="21" stroke="#0a3d66" stroke-width="2" />
       </svg>
     </button>
   </div>
@@ -443,10 +466,7 @@
           titleFont: { size: 16, weight: 'bold' },
           bodyFont: { size: 14 }
         },
-        //zoom: {
-          //pan: { enabled: false, mode: 'x' },
-          //zoom: { enabled: false, mode: 'x', wheel: { enabled: true }, pinch: { enabled: true } }
-        //}
+      
       },
       scales: {
         x: {
@@ -467,7 +487,6 @@
       }
     }
   };
-
   const config2 = { // Segundo gráfico para I_MAX_GRUAS
     type: 'line',
     data: data2,
@@ -485,10 +504,7 @@
           titleFont: { size: 16, weight: 'bold' },
           bodyFont: { size: 14 }
         },
-       // zoom: {
-         // pan: { enabled: false, mode: 'x' },
-          //zoom: { enabled: false, mode: 'x', wheel: { enabled: true }, pinch: { enabled: true } }
-        //}
+    
       },
       scales: {
         x: {
@@ -509,7 +525,6 @@
       }
     }
   };
-
   const myChart = new Chart(ctx, config);
   const myChart2 = new Chart(ctx2, config2);
 
@@ -585,18 +600,6 @@
     if(viewIndex < data.labels.length - 1) {
       viewIndex++;
       updateGraphView();
-    }
-  });
-
-  zoomToggle.addEventListener('click', () => {
-    const zoomPlugin = myChart.getPlugin('zoom');
-    const enabled = zoomPlugin._enabled || false;
-    if(enabled) {
-      zoomPlugin.disable();
-      zoomToggle.style.backgroundColor = 'transparent';
-    } else {
-      zoomPlugin.enable();
-      zoomToggle.style.backgroundColor = 'var(--color-primary)';
     }
   });
 
