@@ -270,6 +270,14 @@
 
   <h1>Medidor de energía CGE</h1>
 
+   <div style="border: 2px solid #0a72c1; padding: 10px; margin-bottom: 20px; background-color: #f5faff;">
+  <strong></strong> <span id="topic1">MEDIDOR_CGE (Número de Tópico: 1)</span> <br>
+  </div>
+
+  <div style="border: 2px solid #0a72c1; padding: 10px; margin-bottom: 20px; background-color: #f5faff;">
+  <strong></strong> <span id="topic2">I_MAX_GRUAS (Número de Tópico: 2)</span> <br>
+  </div>
+
   <div id="connectionStatus">Estado: <span id="connText">Desconectado</span></div>
 
   <!-- Alertas -->
@@ -619,6 +627,10 @@
         const timeLabel = now.toLocaleTimeString();
         const fullDate = now.toLocaleString();
 
+        // Actualizamos el recuadro de MEDIDOR_CGE (topic1)
+        document.getElementById('topic1').innerHTML = `MEDIDOR_CGE (Número de Tópico: 1) - Valor: ${value.toFixed(2)}`;
+
+        
         allData.push({datetime: fullDate, value: value});
         if(allData.length > 1000) allData.shift();
 
@@ -653,6 +665,9 @@
         const timeLabel = now.toLocaleTimeString();
         const fullDate = now.toLocaleString();
 
+        // Actualizamos el recuadro de I_MAX_GRUAS (topic2)
+         document.getElementById('topic2').innerHTML = `I_MAX_GRUAS (Número de Tópico: 2) - Valor: ${value.toFixed(2)}`;
+        
         data2.labels.push(timeLabel);
         data2.datasets[0].data.push(value);
 
