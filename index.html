@@ -1,6 +1,91 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <script>
+    
+// Definir allData globalmente para almacenarlos desde IndexedDB y los mensajes MQTT
+let allData = [];
+// Función para cargar los datos desde IndexedDB
+function loadDataFromDatabase() {
+    const transaction = db.transaction(["measurements"], "readonly");
+    const objectStore = transaction.objectStore("measurements");
+    const cursorRequest = objectStore.openCursor();
+
+    cursorRequest.onsuccess = function(event) {
+        const cursor = event.target.result;
+        if (cursor) {
+            console.log('Cargando datos:', cursor.value);  // Log para depuración
+            // Agregar los datos del cursor al array allData
+            allData.push({
+                datetime: cursor.value.datetime,
+                value: cursor.value.value,
+                valueImax: cursor.value.valueImax
+            });
+            cursor.continue();  // Continuar con el siguiente cursor
+        } else {
+            console.log("Todos los datos cargados desde IndexedDB.");
+            // Una vez que los datos estén cargados, actualizamos la tabla y los gráficos
+            renderTablePage(currentPage);  // Renderizar la tabla con los datos
+            updateGraphData();            // Actualizar los gráficos con los datos
+        }
+    };
+
+    cursorRequest.onerror = function(event) {
+        console.log("Error al cargar los datos de IndexedDB:", event.target.errorCode);
+    };
+}
+    // Abrir o crear la base de datos en IndexedDB
+    let db;
+
+    const request = indexedDB.open('EnergyMeterDB', 1); // Abre o crea la base de datos
+
+    request.onupgradeneeded = function(event) {
+        db = event.target.result;
+        console.log('Base de datos en proceso de actualización...');
+        // Crear un object store para almacenar los valores
+        if (!db.objectStoreNames.contains('measurements')) {
+            const objectStore = db.createObjectStore('measurements', { keyPath: 'id' });
+            objectStore.createIndex('datetime', 'datetime', { unique: false });  // Index para la fecha y hora
+            objectStore.createIndex('value', 'value', { unique: false });  // Index para el valor
+            objectStore.createIndex('valueImax', 'valueImax', { unique: false });  // Index para I_MAX_GRUAS
+        }
+    };
+
+    request.onsuccess = function(event) {
+        db = event.target.result;
+        console.log('Base de datos abierta con éxito.');
+
+         // Ahora que la base de datos está abierta, cargamos los datos
+        loadDataFromDatabase();  // Llamar a la función para cargar los datos desde la base de datos
+    };
+
+    request.onerror = function(event) {
+        console.log('Error al abrir la base de datos:', event.target.errorCode);
+    };
+
+    // Función para agregar un registro a IndexedDB
+    function saveToDatabase(datetime, value, valueImax) {
+        const transaction = db.transaction(["measurements"], "readwrite");
+        const objectStore = transaction.objectStore("measurements");
+
+        const data = {
+            id: `${datetime}-${Math.random()}`,  // Usamos el datetime como la clave primaria
+            datetime: datetime,
+            value: value,
+            valueImax: valueImax
+        };
+
+        const request = objectStore.add(data); // Insertar el nuevo registro
+        request.onsuccess = function(event) {
+            console.log('Datos guardados con éxito:', data);
+        };
+
+        request.onerror = function(event) {
+            console.log('Error al guardar los datos:', event.target.errorCode);
+        };
+    }
+</script>
+
   <meta charset="UTF-8" />
   <title>Medidor de energía CGE</title>
 
@@ -303,6 +388,75 @@
 </table>
 
 <script>
+  // Conexión al broker MQTT
+  const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');  // Usar el broker MQTT especificado
+
+  client.on('connect', function () {
+      console.log("Conectado al broker MQTT");
+
+      // Suscripción a los topics
+      client.subscribe('MEDIDOR_CGE');
+      client.subscribe('I_MAX_GRUAS');  // Suscripción al topic I_MAX_GRUAS
+  });
+
+  client.on('message', function (topic, message) {
+      console.log("Mensaje recibido en el topic:", topic);
+      console.log("Contenido del mensaje:", message.toString());
+
+      if (topic === 'MEDIDOR_CGE') {
+          const value = parseFloat(message.toString());
+          if (!isNaN(value)) {
+              const now = new Date();
+              const datetime = now.toLocaleString();
+              const timeLabel = now.toLocaleTimeString();
+
+              // Actualizamos el recuadro de MEDIDOR_CGE
+              document.getElementById('topic1').innerHTML = `MEDIDOR_CGE : ${value.toFixed(2)} Amp`;
+
+              // Guardamos en la base de datos
+              saveToDatabase(datetime, value, null);  // No se tiene 'I_MAX_GRUAS' aquí, por lo que es null
+
+              // Actualizamos el gráfico y la tabla
+              data.labels.push(timeLabel);
+              data.datasets[0].data.push(value);
+
+              if (data.labels.length > 20) {
+                  data.labels.shift();
+                  data.datasets[0].data.shift();
+              }
+              myChart.update();
+          }
+      }
+
+      if (topic === 'I_MAX_GRUAS') {
+          const value = parseFloat(message.toString());
+          if (!isNaN(value)) {
+              const now = new Date();
+              const datetime = now.toLocaleString();
+              const timeLabel = now.toLocaleTimeString();
+
+              // Actualizamos el recuadro de I_MAX_GRUAS
+              document.getElementById('topic2').innerHTML = `I_MAX_GRUAS : ${value.toFixed(2)} Amp`;
+
+              // Guardamos en la base de datos
+              saveToDatabase(datetime, null, value);  // Guardamos el valor de 'I_MAX_GRUAS' en el campo 'valueImax'
+
+              // Actualizamos el gráfico y la tabla
+              data2.labels.push(timeLabel);
+              data2.datasets[0].data.push(value);
+
+              if (data2.labels.length > 20) {
+                  data2.labels.shift();
+                  data2.datasets[0].data.shift();
+              }
+              myChart2.update();
+          }
+      }
+  });
+</script>
+
+
+<script>
 // Función para actualizar los valores de los recuadros
 function updateTopics() {
   const topics = [
@@ -326,11 +480,9 @@ function updateTopics() {
     }
   });
 }
-// Llamar a la función para probar
+
 updateTopics();
 </script>
-  <!-- ------------ -->
-
   <div id="connectionStatus">Estado: <span id="connText">Desconectado</span></div>
 
   <!-- Alertas -->
@@ -411,8 +563,7 @@ updateTopics();
     }
   });
 
-  // MQTT y Chart.js con Zoom plugin
-  const client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
+  // MQTT y Chart.js
   const ctx = document.getElementById('myChart').getContext('2d');
   const ctx2 = document.getElementById('myChart2').getContext('2d'); // Gráfico 2
   const connText = document.getElementById('connText');
@@ -529,7 +680,6 @@ updateTopics();
   const myChart2 = new Chart(ctx2, config2);
 
   let paused = false;
-  let allData = [];
   let viewIndex = -1;
 
   const pauseBtn = document.getElementById('pauseBtn');
@@ -780,15 +930,85 @@ updateTopics();
       tableBody.appendChild(tr);
     }
     const totalPages = Math.min(1000, Math.max(1, Math.ceil(allData.length / rowsPerPage)));
-    pageInfo.textContent = `Página ${currentPage} / ${totalPages}`;
-  }
+    document.getElementById('pageInfo').textContent = `Página ${currentPage} / ${totalPages}`;
+}
 
-  function updatePaginationButtons() {
+// Función para actualizar los botones de paginación
+function updatePaginationButtons() {
     const totalPages = Math.min(1000, Math.max(1, Math.ceil(allData.length / rowsPerPage)));
-    prevPageBtn.disabled = currentPage === 1;
-    nextPageBtn.disabled = currentPage === totalPages;
-  }
+    document.getElementById('prevPage').disabled = currentPage === 1;
+    document.getElementById('nextPage').disabled = currentPage === totalPages;
+}
 
+// Cargar los datos desde IndexedDB
+function loadDataFromDatabase() {
+    const transaction = db.transaction(["measurements"], "readonly");
+    const objectStore = transaction.objectStore("measurements");
+    const cursorRequest = objectStore.openCursor();
+
+    cursorRequest.onsuccess = function(event) {
+        const cursor = event.target.result;
+        if (cursor) {
+            // Agregar los datos del cursor al array allData
+            allData.push({
+                datetime: cursor.value.datetime,
+                value: cursor.value.value,
+                valueImax: cursor.value.valueImax
+            });
+            cursor.continue();
+        } else {
+            console.log("Datos cargados desde IndexedDB");
+            // Una vez que los datos estén cargados, actualizamos la tabla y los gráficos
+            renderTablePage(currentPage);
+            updateGraphData();
+        }
+    };
+
+    cursorRequest.onerror = function(event) {
+        console.log("Error al cargar los datos de IndexedDB:", event.target.errorCode);
+    };
+}
+
+// Actualizar los gráficos con los datos cargados
+function updateGraphData() {
+    // Actualizar datos del gráfico para "MEDIDOR_CGE"
+    data.labels = allData.map(item => item.datetime);
+    data.datasets[0].data = allData.map(item => item.value);
+
+    // Actualizar gráfico 1
+    myChart.update();
+
+    // Actualizar datos del gráfico para "I_MAX_GRUAS"
+    data2.labels = allData.map(item => item.datetime);
+    data2.datasets[0].data = allData.map(item => item.valueImax);
+
+    // Actualizar gráfico 2
+    myChart2.update();
+}
+
+// Inicializar la carga de datos desde IndexedDB
+request.onsuccess = function(event) {
+    db = event.target.result;
+    console.log("Base de datos abierta con éxito.");
+    loadDataFromDatabase();  // Cargar los datos cuando se abre la base de datos
+};
+
+  // Cuando la base de datos se abre correctamente, también cargamos los datos
+request.onupgradeneeded = function(event) {
+    db = event.target.result;
+
+  // Crear un object store si no existe
+    if (!db.objectStoreNames.contains('measurements')) {
+        const objectStore = db.createObjectStore('measurements', { keyPath: 'id' });
+        objectStore.createIndex('datetime', 'datetime', { unique: false });
+        objectStore.createIndex('value', 'value', { unique: false });
+        objectStore.createIndex('valueImax', 'valueImax', { unique: false });
+    }
+};
+
+request.onerror = function(event) {
+    console.log('Error al abrir la base de datos:', event.target.errorCode);
+};
   prevPageBtn.addEventListener('click', () => {
     if (currentPage > 1) {
       currentPage--;
